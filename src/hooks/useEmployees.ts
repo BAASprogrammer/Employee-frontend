@@ -3,14 +3,27 @@ import { api, getErrorMessage } from '../api/axiosInstance';
 import type { Employee } from '../types/employee';
 import type { UseEmployeesResult } from '../types/useEmployees';
 
-export const useEmployees = (): UseEmployeesResult => {
-  // Custom hook para manejar la recuperación de datos de la API
+export const useEmployees = (
+  departmentName: string = '',
+  positionName: string = ''
+): UseEmployeesResult => {
+  // Custom hook para manejar la recuperación de datos de la API.
+  // Los filtros se resuelven en el backend vía query params (departmentName/positionName),
+  // sin usar la variante paginada (page/pageSize) que exige el enunciado.
   const { data: employees, isLoading, error, isFetching, refetch: fetchEmployees } = useQuery({
-    queryKey: ['employees'], // Clave única para identificar la query
-    queryFn: ({ signal }) => api.get<Employee[]>('/api/employee', { signal }).then((res) => res.data), // Función que se ejecuta cuando se necesita obtener los datos
+    queryKey: ['employees', departmentName, positionName], // Clave que incluye los filtros activos
+    queryFn: ({ signal }) =>
+      api
+        .get<Employee[]>('/api/employee', {
+          signal, // Señal de cancelación
+          params: {
+            ...(departmentName ? { departmentName } : {}),
+            ...(positionName ? { positionName } : {}),
+          },
+        })
+        .then((res) => res.data), // Función que se ejecuta cuando se necesita obtener los datos
     staleTime: 60_000 // 1 minuto: evita refetch innecesario
   });
-
 
   // Retorna el resultado de la query: los empleados, el estado de loading, el error y la función para recargar los empleados
   return {

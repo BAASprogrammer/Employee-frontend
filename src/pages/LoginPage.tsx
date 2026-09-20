@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getErrorMessage } from '../api/axiosInstance';
 import { User, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Users } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,6 +25,7 @@ export const LoginPage: React.FC = () => {
     }
 
     // Manejo del login
+    const started = Date.now(); // Marca el inicio para calcular cuánto falta para los 5s
     try {
       // Esperar a que el login se complete
       setIsLoading(true);
@@ -32,7 +33,12 @@ export const LoginPage: React.FC = () => {
       // Navegar al dashboard
       navigate('/dashboard');
     } catch (err) {
-      setError('Credenciales inválidas. Verifica tu usuario y contraseña.');
+      // Evita que el error aparezca antes de cumplirse ~5s de spinner
+      const remaining = Math.max(0, 5000 - (Date.now() - started));
+      // Esperar a que pasen los segundos restantes
+      await new Promise((resolve) => window.setTimeout(resolve, remaining));
+      // Recién acá se muestra el error (mientras tanto el spinner sigue girando)
+      setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
       // Limpiar los campos del formulario
@@ -167,17 +173,8 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Checkbox y botón de restablecer contraseña */}
-            <div className="flex items-center justify-between text-sm mt-1">
-              <label className="flex items-center gap-2 text-slate-400 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 accent-blue-500 cursor-pointer rounded"
-                />
-                <span>Recordarme</span>
-              </label>
+            {/* Botón de restablecer contraseña */}
+            <div className="flex items-center justify-end text-sm mt-1">
               <button
                 type="button"
                 className="text-blue-400 hover:text-blue-300 font-medium text-xs transition-colors"

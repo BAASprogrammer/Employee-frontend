@@ -22,6 +22,6 @@ export interface LoginResponse {
 
 // Interface que define el contexto de autenticación
 export interface AuthContextType extends AuthState {
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, signal?: AbortSignal) => Promise<void>;
   logout: () => void;
 }

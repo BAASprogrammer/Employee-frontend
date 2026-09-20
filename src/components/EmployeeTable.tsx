@@ -94,7 +94,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
       </div>
 
       {/* Filas de la tabla */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto relative">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-400">
             <div className="w-7 h-7 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
@@ -107,8 +107,16 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
           </div>
         ) : (
           currentPageEmployees.map((emp) => (
-            <EmployeeRow key={emp.id || emp.email || emp.name} employee={emp} />
+            <EmployeeRow key={emp.id} employee={emp} />
           ))
+        )}
+
+        {/* Overlay de refetch: spinner sobre los datos mientras se actualiza */}
+        {isFetching && !isLoading && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex flex-col items-center justify-center gap-3 z-10">
+            <div className="w-7 h-7 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm text-slate-500">Cargando directorio...</span>
+          </div>
         )}
       </div>
 

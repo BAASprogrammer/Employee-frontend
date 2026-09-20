@@ -35,13 +35,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Inicia sesión mediante una mutación de TanStack Query
   const loginMutation = useMutation({
     mutationKey: ['auth', 'login'],
-    mutationFn: async (body: LoginRequest): Promise<User> => {
-      // Envía la solicitud POST al backend
-      const { data } = await api.post<LoginResponse>('/api/auth/login', body);
+    // No reintentar: evita esperar dos veces (timeout + retry) sin conexión
+    retry: 0,
+    mutationFn: async ({ username, password, signal }: LoginRequest & { signal?: AbortSignal }): Promise<User> => {
+      // Envía la solicitud POST al backend (transmite la señal de aborto)
+      const { data } = await api.post<LoginResponse>('/api/auth/login', { username, password }, { signal });
       // Almacena el token en localStorage
       tokenStorage.set(data.token);
       // Crea el nuevo usuario
-      const newUser: User = { username: body.username };
+      const newUser: User = { username };
       // Almacena el usuario en localStorage
       saveStoredUser(newUser);
       return newUser;
@@ -52,9 +54,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     },
   });
 
-  // Expone el login manteniendo la misma firma
-  const login = async (username: string, password: string): Promise<void> => {
-    await loginMutation.mutateAsync({ username, password });
+  // Expone el login manteniendo la firma (con señal opcional para abortar)
+  const login = async (username: string, password: string, signal?: AbortSignal): Promise<void> => {
+    await loginMutation.mutateAsync({ username, password, signal });
   };
 
   // Retorna el proveedor del contexto de autenticación

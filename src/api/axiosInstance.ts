@@ -29,8 +29,8 @@ export const setUnauthorizedRequest = (callback: (() => void) | null) => {
 
 // Creación de la instancia de axios con la URL base y headers
 export const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/',
-    timeout: 10000,
+    baseURL: import.meta.env.VITE_API_URL,
+    timeout: 5000,
     headers: {
         'Content-Type': 'application/json'
     }
