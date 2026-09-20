@@ -6,7 +6,7 @@ const TOKEN_KEY = "employee_token";
 const LOGIN_PATH = '/api/auth/login';
 
 // Constante que administra el token en localStorage
-export const tokenStore = {
+export const tokenStorage = {
     // Almacena el token en localStorage
     set: (token: string) => {
         localStorage.setItem(TOKEN_KEY, token);
@@ -39,7 +39,7 @@ export const api = axios.create({
 // Añade el token al header de la petición
 api.interceptors.request.use((config) => {
     // Obtiene el token de localStorage
-    const token = tokenStore.get();
+    const token = tokenStorage.get();
     // Si existe el token, lo añade al header de la petición
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
