@@ -1,7 +1,7 @@
 import type { Employee } from './employee';
 
-// Interface que define el resultado del hook useEmployeePagination
-export interface UseEmployeePaginationResult {
+// Interface que define el estado de la paginación de empleados
+export interface EmployeePaginationResult {
   currentPage: number;
   setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   pageSize: number;

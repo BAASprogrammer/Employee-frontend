@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import type { Employee } from '../types/employee';
-import type { UseEmployeePaginationResult } from '../types/useEmployeePagination';
+import type { EmployeePaginationResult } from '../types/employeePagination';
 
 // Hook para la paginación de empleados
 export const useEmployeePagination = (
   employees: Employee[],
   initialPageSize: number = 10
-): UseEmployeePaginationResult => {
+): EmployeePaginationResult => {
   // Estado de la paginación
   const [currentPage, setCurrentPage] = useState<number>(1);
   // Estado del tamaño de la página

@@ -41,7 +41,7 @@ const makeEmployees = (n: number): Employee[] =>
 // recibe datos congelados. El flujo entero circula como en producción:
 // useEmployees (con axios mockeado) -> useEmployeePagination -> EmployeeTable.
 const TableHarness: React.FC = () => {
-  const { employees, isLoading, error, isFetching, fetchEmployees } = useEmployees();
+  const { employees, isLoading, error, isFetching, isOffline, fetchEmployees } = useEmployees();
   const {
     currentPage,
     setCurrentPage,
@@ -58,6 +58,7 @@ const TableHarness: React.FC = () => {
       isLoading={isLoading}
       error={error}
       isFetching={isFetching}
+      isOffline={isOffline}
       currentPage={currentPage}
       totalPages={totalPages}
       totalItems={totalItems}

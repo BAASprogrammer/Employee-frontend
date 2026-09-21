@@ -28,7 +28,7 @@ export const DashboardPage: React.FC = () => {
   const [positionFilter, setPositionFilter] = useState('');
 
   // Custom hook para manejar la recuperación de datos de la API, filtrando en el backend
-  const { employees, isLoading, error, fetchEmployees, isFetching } = useEmployees(
+  const { employees, isLoading, error, fetchEmployees, isFetching, isOffline } = useEmployees(
     departmentFilter,
     positionFilter
   );
@@ -133,6 +133,7 @@ export const DashboardPage: React.FC = () => {
                 isLoading={isLoading}
                 error={error}
                 isFetching={isFetching}
+                isOffline={isOffline}
                 currentPage={currentPage}
                 totalPages={totalPages}
                 totalItems={totalItems}

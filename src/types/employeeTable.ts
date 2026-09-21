@@ -5,6 +5,7 @@ export interface EmployeeTableProps {
   currentPageEmployees: Employee[];
   isLoading: boolean;
   isFetching: boolean;
+  isOffline: boolean;
   error: string | null;
   currentPage: number;
   totalPages: number;

@@ -1,12 +1,18 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { onlineManager, useQuery } from '@tanstack/react-query';
 import { api, getErrorMessage } from '../api/axiosInstance';
 import type { Employee } from '../types/employee';
-import type { UseEmployeesResult } from '../types/useEmployees';
+import type { EmployeesResult } from '../types/employees';
 
 export const useEmployees = (
   departmentName: string = '',
   positionName: string = ''
-): UseEmployeesResult => {
+): EmployeesResult => {
+  // Estado de red global: sin internet las queries no fallan, se pausan
+  // (fetchStatus 'paused'). Este flag permite mostrar un banner explícito en
+  // vez de silenciar el problema.
+  const [isOnline, setIsOnline] = useState<boolean>(onlineManager.isOnline());
+  useEffect(() => onlineManager.subscribe(setIsOnline), []);
   // Custom hook para manejar la recuperación de datos de la API.
   // Los filtros se resuelven en el backend vía query params (departmentName/positionName),
   // sin usar la variante paginada (page/pageSize) que exige el enunciado.
@@ -31,6 +37,7 @@ export const useEmployees = (
     isLoading: employees === undefined && isLoading,
     error: error ? getErrorMessage(error) : null,
     fetchEmployees: () => fetchEmployees(),
-    isFetching
+    isFetching,
+    isOffline: !isOnline,
   };
 };
