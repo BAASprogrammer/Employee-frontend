@@ -24,6 +24,7 @@ La base URL se toma de `VITE_API_URL` desde el archivo `.env` (por defecto `http
 - **Login**: llama a `POST /api/auth/login`, guarda el JWT en `localStorage` y un interceptor de axios lo agrega como `Authorization: Bearer` en cada request. Si llega un 401, la sesión se cierra y se vuelve a `/login`. El gancho se registra desde `AuthContext` con `setUnauthorizedRequest`, así axios no conoce React y no se generan dependencias circulares. Al abrir la app se valida que el token no haya vencido (`src/utils/jwt.ts`).
 - **Directorio**: consume `GET /api/employee` **sin `page/pageSize`** (como pide el enunciado), filtrando por `departmentName` y `positionName` del lado del backend. La paginación se resuelve **en el cliente**, nunca se renderizan más de 15 filas y se cubren los estados de carga, vacío y error.
 - **Reporte**: `POST /api/report/generate` → `executionId` → polling cada 2 s contra `/api/report/{id}/status` hasta `Completed`, con backoff y un tope de 60 s.
+- **Dispositivos**: CRUD completo contra `GET/POST/PUT/DELETE /api/device`. La colección `Devices` no se siembra en el arranque (igual que `Departments`/`Positions`), así que la tabla arranca vacía a propósito y se **puebla desde la propia vista**: formulario inline para dar de alta (POST) y editar (PUT), y borrado (DELETE) con confirmación. Se cubren los estados de carga, vacío, error y desconexión.
 
 ## Estructura
 
@@ -35,9 +36,11 @@ src/
 │   ├── useEmployees.ts         # consulta con filtros (server-side, sin paginar)
 │   ├── useEmployeeOptions.ts   # opciones de deptos/cargos desde los empleados
 │   ├── useEmployeePagination.ts  # slice por página, en el cliente
+│   ├── useDevices.ts           # listado + alta/edición/borrado de dispositivos
+│   ├── useOnlineStatus.ts      # estado de red global, compartido por las vistas
 │   └── useReport.ts            # genera el job y pollea su estado
 ├── pages/                      # LoginPage, DashboardPage
-├── components/                 # EmployeeTable, EmployeeRow, PaginationBar, ReportCard, Sidebar
+├── components/                 # EmployeeTable, DeviceTable, DeviceForm, ConfirmModal, ReportCard, Sidebar, ...
 ├── routes/AppRoutes.tsx        # rutas + guard de autenticación
 ├── types/                      # tipos que reflejan lo que la API devuelve
 └── utils/                      # jwt, userStorage, employeeOptions
@@ -79,6 +82,17 @@ El enunciado pedía filtrar por `departmentName` y `positionName`, y la API lo s
 
 Por eso las opciones salen de los empleados cargados (`useEmployeeOptions`): así siempre hay opciones y coinciden carácter a carácter con lo que la API filtra. El filtrado sigue siendo server-side; lo único que se deriva de los datos son las *opciones*. Quedó registrado como supuesto porque es exactamente el tipo de "el backend no es lo que parece" que un front tiene que aprender a capear.
 
+### La vista de dispositivos (CRUD sobre el contrato real)
+
+`Devices` es un caso espejo de `Departments`/`Positions`: el endpoint existe (`/api/device`) pero el seed nunca crea la colección, así que un simple GET devuelve `[]` toda la vida. En la primera pasada se trató igual que el resto (fuera de alcance), pero el contrato cuenta otra historia: hay **CRUD completo** (`POST`/`PUT`/`DELETE` por id), lo que significa que la intención es que la vista la *pueble* usando los endpoints.
+
+La sección quedó así:
+
+- **Listado** con `useDevices` (`GET /api/device`), decoupleado por props como `EmployeeTable` y con los mismos estados: carga, vacío (con CTA a dar de alta), error y desconexión.
+- **Alta y edición** con un formulario inline (`POST` y `PUT`) que valida en el cliente los requeridos del schema (`name` ≥ 2 chars, `location`, `timezone`) y usa `mutateAsync`, con invalidación de la cache al completar.
+- **Borrado** (`DELETE`) con un modal de confirmación propio.
+- Sin librerías extra: el formulario inline y el modal de confirmación se resuelven con JSX + Tailwind (sin dependency de modales), en línea con la política de dependencias del resto del proyecto. Los dispositivos no se pagan porque el volumen real es chico; si creciera, se reutilizaría `useEmployeePagination`.
+
 ### El polling del reporte (4.b)
 
 El reporte es un job: un POST devuelve un `executionId` y el resto es consultar el estado hasta que complete. Se resolvió con el `refetchInterval` de React Query y a propósito no se usó `setInterval` a mano: con `setInterval` un request puede salir mientras el anterior sigue en vuelo, y hay que acordarse de limpiar el timer en cada ciclo de vida. React Query agenda el siguiente poll recién cuando el anterior terminó, lo cancela solo si el hook se desmonta (navegar fuera de la vista) y aborta el fetch con el `signal`. No queda forma de dejar requests huérfanas sin intervención manual.
@@ -113,7 +127,7 @@ Los estilos usan **Tailwind CSS v4** con su plugin oficial de Vite (`@tailwindcs
 1. El filtrado lo hace el backend (params `departmentName`/`positionName`, igualdad exacta); los valores vacíos se omiten.
 2. Las opciones de los filtros se derivan de los empleados porque el seed no puebla `Departments`/`Positions` (verificado en `Program.cs`).
 3. La paginación es solo de presentación: jamás se manda `page/pageSize`.
-4. La vista de **dispositivos** (`GET /api/device`) queda fuera de alcance: el endpoint existe y funciona, pero —igual que `Departments`/`Positions`— la colección `Devices` no se siembra en el arranque (`Program.cs` solo ejecuta `SeedEmployeesAsync` y `SeedPunchTypesAsync`), así que responde `[]` sin que nadie haya creado dispositivos. Como el backend es intocable y ese flujo no estaba entre los objetivos centrales, no se sumó una vista que dependería de datos que no existen en el entorno de entrega. Si algún día se agrega, reutilizaría la estrategia del directorio (hook + paginación cliente + estados vacío/error).
+4. La vista de **dispositivos** (`GET/POST/PUT/DELETE /api/device`) **sí está en alcance y se puebla desde la UI**: el seed del backend no siembra la colección `Devices` (`Program.cs` solo ejecuta `SeedEmployeesAsync` y `SeedPunchTypesAsync`), así que la tabla arranca vacía por diseño y el alta/edición/borrado se hace en el mismo dashboard. La primera versión la dejó fuera; sumarla fue la respuesta al dato de que se esperaba alimentarla *con los propios endpoints*.
 
 ## Tests
 

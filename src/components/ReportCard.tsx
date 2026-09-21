@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { onlineManager } from '@tanstack/react-query';
 import { FileText, FileCheck2, Loader2, AlertCircle, RefreshCw, Timer, WifiOff } from 'lucide-react';
 import { useCreateReport, useReportStatus, STATUS_MAX_WAIT_MS } from '../hooks/useReport';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { REPORT_STATUS } from '../types/report';
 import { getErrorMessage } from '../api/axiosInstance';
 
@@ -15,9 +15,7 @@ export const ReportCard: React.FC = () => {
   // Marca si el job superó el deadline global sin completarse
   const [timedOut, setTimedOut] = useState(false);
   // Estado de red global: sin internet las queries y mutations se pausan, no fallan
-  const [isOnline, setIsOnline] = useState<boolean>(onlineManager.isOnline());
-
-  useEffect(() => onlineManager.subscribe(setIsOnline), []);
+  const isOnline = useOnlineStatus();
 
   // Mutación: dispara POST /api/report/generate
   const { mutate: generate, isPending, error: generateError } = useCreateReport();

@@ -5,9 +5,13 @@ import { useNavigate } from 'react-router-dom';
 import { useEmployees } from '../hooks/useEmployees';
 import { useEmployeeOptions } from '../hooks/useEmployeeOptions';
 import { useEmployeePagination } from '../hooks/useEmployeePagination';
+import { useDevices, useCreateDevice, useUpdateDevice, useDeleteDevice } from '../hooks/useDevices';
 import { Sidebar } from '../components/Sidebar';
 import { EmployeeTable } from '../components/EmployeeTable';
+import { DeviceTable } from '../components/DeviceTable';
 import { ReportCard } from '../components/ReportCard';
+import { getErrorMessage } from '../api/axiosInstance';
+import type { DeviceInput } from '../types/device';
 
 // Key que conserva la pestaña activa en localStorage para mantenerla al recargar
 const TAB_KEY = 'employee_frontend_tab';
@@ -51,6 +55,28 @@ export const DashboardPage: React.FC = () => {
     totalPages,
     totalItems,
   } = useEmployeePagination(employees, 15);
+
+  // Dispositivos: listado + mutations de alta/edición/borrado
+  const {
+    devices,
+    isLoading: devicesLoading,
+    isFetching: devicesFetching,
+    isOffline: devicesOffline,
+    error: devicesError,
+    refetch: refetchDevices,
+  } = useDevices();
+  const createDevice = useCreateDevice();
+  const updateDevice = useUpdateDevice();
+  const deleteDevice = useDeleteDevice();
+  const mutationError = createDevice.error || updateDevice.error || deleteDevice.error;
+  const mutationPending = createDevice.isPending || updateDevice.isPending || deleteDevice.isPending;
+
+  const handleCreateDevice = (input: DeviceInput): Promise<void> =>
+    createDevice.mutateAsync(input).then(() => undefined);
+  const handleUpdateDevice = (id: string, input: DeviceInput): Promise<void> =>
+    updateDevice.mutateAsync({ id, input }).then(() => undefined);
+  const handleDeleteDevice = (id: string): Promise<void> =>
+    deleteDevice.mutateAsync(id).then(() => undefined);
 
   // Manejo del cierre de sesión
   const handleLogout = () => {
@@ -97,12 +123,14 @@ export const DashboardPage: React.FC = () => {
         <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 gap-4">
           <div className="min-w-0">
             <h1 className="text-sm font-bold text-slate-900 leading-tight">
-              {activeTab === 'reporte' ? 'Reporte de Empleados' : 'Dashboard de Empleados'}
+              {activeTab === 'reporte' ? 'Reporte de Empleados' : activeTab === 'dispositivos' ? 'Dispositivos' : 'Dashboard de Empleados'}
             </h1>
             <p className="text-[11px] text-slate-400">
               {activeTab === 'reporte'
                 ? 'Generación asíncrona de reportes con polling'
-                : `${employees.length} registros cargados · paginación activa`}
+                : activeTab === 'dispositivos'
+                  ? `${devices.length} dispositivos registrados`
+                  : `${employees.length} registros cargados · paginación activa`}
             </p>
           </div>
 
@@ -119,7 +147,24 @@ export const DashboardPage: React.FC = () => {
 
         <div className="p-6 flex-1 flex flex-col gap-6 min-h-0">
 
-          {activeTab === 'reporte' ? (
+          {activeTab === 'dispositivos' ? (
+            /* Vista de dispositivos: lista + alta/edición/borrado vía la API */
+            <div className="flex flex-1 min-h-0">
+              <DeviceTable
+                devices={devices}
+                isLoading={devicesLoading}
+                isFetching={devicesFetching}
+                isOffline={devicesOffline}
+                error={devicesError}
+                mutationError={mutationError ? getErrorMessage(mutationError) : null}
+                mutationPending={mutationPending}
+                onCreate={handleCreateDevice}
+                onUpdate={handleUpdateDevice}
+                onDelete={handleDeleteDevice}
+                onRefresh={refetchDevices}
+              />
+            </div>
+          ) : activeTab === 'reporte' ? (
             /* Vista del reporte con polling */
             <div className="flex justify-center items-start pt-4">
               <ReportCard />

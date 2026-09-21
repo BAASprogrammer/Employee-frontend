@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { onlineManager } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { getErrorMessage } from '../api/axiosInstance';
 import { User, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Users, WifiOff } from 'lucide-react';
 
@@ -12,9 +12,7 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Estado de red global: offline la mutación de login se pausa, no falla
-  const [isOnline, setIsOnline] = useState<boolean>(onlineManager.isOnline());
-
-  useEffect(() => onlineManager.subscribe(setIsOnline), []);
+  const isOnline = useOnlineStatus();
 
   const { login } = useAuth();
   const navigate = useNavigate();
