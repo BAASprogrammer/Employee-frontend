@@ -83,12 +83,13 @@ Por eso las opciones salen de los empleados cargados (`useEmployeeOptions`): as�
 
 El reporte es un job: un POST devuelve un `executionId` y el resto es consultar el estado hasta que complete. Se resolvió con el `refetchInterval` de React Query y a propósito no se usó `setInterval` a mano: con `setInterval` un request puede salir mientras el anterior sigue en vuelo, y hay que acordarse de limpiar el timer en cada ciclo de vida. React Query agenda el siguiente poll recién cuando el anterior terminó, lo cancela solo si el hook se desmonta (navegar fuera de la vista) y aborta el fetch con el `signal`. No queda forma de dejar requests huérfanas sin intervención manual.
 
-Además de `Completed`, el polling corta en dos casos que aparecieron al probar:
+El polling corta en `Completed` y en tres casos más que aparecieron al probar:
 
 - **Deadline de 60 s**: si el job no termina, hay que dejar de preguntar. Se mide con `job.createdAt` porque `dataUpdatedAt` de React Query se renueva en cada response y no servía de ancla. Pasado el límite, la UI muestra "timeout" con botón de reintento.
-- **404**: el job vive en memoria del backend; si la API se reinicia, el `executionId` deja de existir. Ante 404 se corta el polling en vez de consultar para siempre algo que no va a cambiar.
+- **Error (404, 5xx, red)**: cualquier error corta el polling en el primer fallo (`retry: false`) — el polling mismo ya *es* el mecanismo de reintento, y si falla no hay estado del lado del servidor que vaya a mejorar solo: un 404 es un job que ya no existe (vive en memoria del backend) y un 5xx o un error de red no se resuelven preguntando otra vez. La UI muestra el mensaje del error con un botón manual "Reintentar generación" que dispara un job nuevo.
+- **Sin conexión**: la desconexión no produce un error sino que TanStack pausa la petición (`fetchStatus === 'paused'` a través de su *online manager*). El polling también se corta acá, y la UI muestra un aviso "Sin conexión: se pausó el seguimiento del reporte" con su propio reintento al volver.
 
-Los errores transitorios (red, 5xx) no cortan el polling: se reintenta en el siguiente ciclo. Y el intervalo crece con backoff (2 s → 4 s → 8 s) según cuánto lleva el job, para no bombardear al servidor.
+Cuando el polling sigue activo, el intervalo crece con backoff (2 s → 4 s → 8 s) según cuánto lleva el job, para no bombardear al servidor.
 
 ### Sesión y token: vivir con lo que el contrato da
 
