@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { Menu } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useEmployees } from '../hooks/useEmployees';
 import { useEmployeeOptions } from '../hooks/useEmployeeOptions';
@@ -8,10 +9,21 @@ import { Sidebar } from '../components/Sidebar';
 import { EmployeeTable } from '../components/EmployeeTable';
 import { ReportCard } from '../components/ReportCard';
 
+// Key que conserva la pestaña activa en localStorage para mantenerla al recargar
+const TAB_KEY = 'employee_frontend_tab';
+
+// Lee la pestaña activa guardada (con respaldo por si hay datos inválidos)
+function readActiveTab(): string {
+  const saved = localStorage.getItem(TAB_KEY);
+  return saved ?? 'directorio';
+}
+
 export const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('directorio');
+  // Lazy init: arranca en la pestaña que quedó guardada tras la última sesión
+  const [activeTab, setActiveTab] = useState<string>(readActiveTab);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [positionFilter, setPositionFilter] = useState('');
 
@@ -46,6 +58,13 @@ export const DashboardPage: React.FC = () => {
     navigate('/login');
   };
 
+  // Cambio de pestaña (cierra el menú móvil al navegar)
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    localStorage.setItem(TAB_KEY, tab);
+    setMobileMenuOpen(false);
+  };
+
   // Manejo de filtros: actualiza el valor y vuelve a la primera página.
   // Al cambiar el departamento se limpia el cargo, porque las posiciones dependen del departamento.
   const handleDepartmentFilterChange = (value: string) => {
@@ -65,8 +84,10 @@ export const DashboardPage: React.FC = () => {
         user={user}
         employeeCount={employees.length}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         onLogout={handleLogout}
+        mobileOpen={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
       />
 
       {/* Contenido principal */}
@@ -74,7 +95,7 @@ export const DashboardPage: React.FC = () => {
 
         {/* Barra superior */}
         <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 gap-4">
-          <div>
+          <div className="min-w-0">
             <h1 className="text-sm font-bold text-slate-900 leading-tight">
               {activeTab === 'reporte' ? 'Reporte de Empleados' : 'Dashboard de Empleados'}
             </h1>
@@ -84,6 +105,16 @@ export const DashboardPage: React.FC = () => {
                 : `${employees.length} registros cargados · paginación activa`}
             </p>
           </div>
+
+          {/* Botón hamburguesa (solo móvil) */}
+          <button
+            type="button"
+            className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer shrink-0"
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Abrir menú"
+          >
+            <Menu size={20} />
+          </button>
         </header>
 
         <div className="p-6 flex-1 flex flex-col gap-6 min-h-0">

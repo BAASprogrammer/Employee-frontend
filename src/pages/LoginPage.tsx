@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { onlineManager } from '@tanstack/react-query';
+import { useAuth } from '../hooks/useAuth';
 import { getErrorMessage } from '../api/axiosInstance';
-import { User, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Users } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Users, WifiOff } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -10,6 +11,10 @@ export const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Estado de red global: offline la mutación de login se pausa, no falla
+  const [isOnline, setIsOnline] = useState<boolean>(onlineManager.isOnline());
+
+  useEffect(() => onlineManager.subscribe(setIsOnline), []);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -33,8 +38,8 @@ export const LoginPage: React.FC = () => {
       // Navegar al dashboard
       navigate('/dashboard');
     } catch (err) {
-      // Evita que el error aparezca antes de cumplirse ~5s de spinner
-      const remaining = Math.max(0, 5000 - (Date.now() - started));
+      // Evita que el error aparezca antes de cumplirse ~3s de spinner
+      const remaining = Math.max(0, 3000 - (Date.now() - started));
       // Esperar a que pasen los segundos restantes
       await new Promise((resolve) => window.setTimeout(resolve, remaining));
       // Recién acá se muestra el error (mientras tanto el spinner sigue girando)
@@ -50,7 +55,7 @@ export const LoginPage: React.FC = () => {
   // Manejo del botón de "Olvidé mi contraseña"
   const forgetPassword = () => {
     setError('Contacta a Recursos Humanos para restablecer tu contraseña.');
-    setTimeout(() => setError(null), 6000);
+    setTimeout(() => setError(null), 4000);
   };
 
   // Renderizado del componente
@@ -191,10 +196,17 @@ export const LoginPage: React.FC = () => {
               disabled={isLoading}
             >
               {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-blue-400/30 border-t-blue-300 rounded-full animate-spin" />
-                  <span>Autenticando...</span>
-                </>
+                !isOnline ? (
+                  <>
+                    <WifiOff size={17} />
+                    <span>Sin conexión: reintentando al volver</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-4 h-4 border-2 border-blue-400/30 border-t-blue-300 rounded-full animate-spin" />
+                    <span>Autenticando...</span>
+                  </>
+                )
               ) : (
                 <>
                   <span>Iniciar Sesión</span>

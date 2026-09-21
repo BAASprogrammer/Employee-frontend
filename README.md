@@ -1,10 +1,10 @@
 # Employee Frontend — Challenge GoodRabbit
 
-Front-end en React + TypeScript para la API `EmployeeAPI` (.NET 8 + MongoDB). Se armó para el challenge de desarrollador front-end semi-senior de GoodRabbit sin tocar una línea del backend: el contrato de la API es el que es y la app se adapta.
+Front-end de React + TypeScript para la API `EmployeeAPI` (.NET 8 + MongoDB). Es la propuesta para el challenge de desarrollador front-end semi-senior de GoodRabbit y se armó con una regla de oro: **el backend no se toca**. El contrato de la API es el que es, y la app se adapta a él en lugar de pedirle cambios.
 
 ## Cómo correrlo
 
-Primero el backend (en el repo `EmployeeAPI`, rama `front-end`):
+Se levanta primero la API (en el repo `EmployeeAPI`, rama `front-end`):
 
 ```bash
 docker compose up --build   # API en http://localhost:8080, Swagger en /swagger
@@ -17,15 +17,13 @@ npm install
 npm run dev
 ```
 
-La base URL se toma de `VITE_API_URL` desde el archivo .env (usa `http://localhost:8080/` por defecto, revisa `axiosInstance.ts`). Las credenciales para entrar son las indicadas en el repositorio del backend (admin/admin).
-
-`npm test` corre los tests (Vitest) y `npm run lint` el ESLint.
+La base URL se toma de `VITE_API_URL` desde el archivo `.env` (por defecto `http://localhost:8080/`, se ve en `axiosInstance.ts`). Las credenciales de acceso son las que indica el repo del backend (admin/admin). `npm test` corre los tests (Vitest) y `npm run lint` el ESLint.
 
 ## Qué hace la app
 
-- **Login**: envía `POST /api/auth/login`, guarda el JWT en `localStorage` y un interceptor de axios lo pone como `Authorization: Bearer` en cada request. Si cualquier endpoint responde 401, la sesión se cierra y vuelve a `/login`. Para eso `AuthContext` registra un callback en axios (`setUnauthorizedRequest`) — así axios no sabe nada de React y no se montan dependencias circulares. Al abrir la app se valida que el token no haya vencido (`src/utils/jwt.ts`).
-- **Directorio**: `GET /api/employee` **sin `page/pageSize`** (como pide el enunciado), con filtros `departmentName` y `positionName` resueltos en el backend. La tabla pagina **en el cliente**, nunca renderiza más de 15 filas y muestra estados de carga, vacío y error.
-- **Reporte**: `POST /api/report/generate` → `executionId` → polling cada 2 s contra `/api/report/{id}/status` hasta `Completed`, con backoff y un límite de 60 s.
+- **Login**: llama a `POST /api/auth/login`, guarda el JWT en `localStorage` y un interceptor de axios lo agrega como `Authorization: Bearer` en cada request. Si llega un 401, la sesión se cierra y se vuelve a `/login`. El gancho se registra desde `AuthContext` con `setUnauthorizedRequest`, así axios no conoce React y no se generan dependencias circulares. Al abrir la app se valida que el token no haya vencido (`src/utils/jwt.ts`).
+- **Directorio**: consume `GET /api/employee` **sin `page/pageSize`** (como pide el enunciado), filtrando por `departmentName` y `positionName` del lado del backend. La paginación se resuelve **en el cliente**, nunca se renderizan más de 15 filas y se cubren los estados de carga, vacío y error.
+- **Reporte**: `POST /api/report/generate` → `executionId` → polling cada 2 s contra `/api/report/{id}/status` hasta `Completed`, con backoff y un tope de 60 s.
 
 ## Estructura
 
@@ -49,22 +47,22 @@ src/
 
 ### TanStack Query para todo lo que pide datos
 
-Ningún componente llama a axios directamente. Cada dominio vive en un hook y la `queryKey` incluye los filtros activos (`['employees', dept, pos]`), así que cambiar un filtro cambia la key y provoca un refetch, y volver a un filtro anterior reaprovecha la cache (`staleTime` de 60 s). El `signal` de TanStack aborta la petición si el componente se desmonta, con lo que no quedan peticiones huérfanas.
+Ningún componente llama a axios directo. Cada dominio vive en un hook y la `queryKey` incluye los filtros activos (`['employees', dept, pos]`): cambiar un filtro cambia la key y provoca el refetch, y volver a un filtro ya usado reaprovecha la cache (con `staleTime` de 60 s). El `signal` de TanStack aborta la petición si el componente se desmonta, así que no quedan requests huérfanas.
 
-Un detalle que hubo que pensar: si un refetch falla, no conviene mostrar datos viejos como si fueran frescos — por eso el hook devuelve `[]` ante error (`error ? []`).
+Hubo un detalle que costó: si un refetch falla, no conviene seguir mostrando datos viejos como si fueran frescos — por eso el hook devuelve `[]` ante error (`error ? []`).
 
 ### La tabla y el problema del dataset grande (4.a)
 
-El enunciado prohíbe usar `page/pageSize` pese a que el endpoint los soporta. Con 2000 empleados, renderizar todo es la trampa clásica: 2000 filas ⇒ ~20.000+ nodos de DOM, scroll y re-render costosos. La distinción que resultó decisiva: **los datos en JS son baratos** (2000 objetos ≈ 2 MB) y **los nodos del DOM son caros** — hay que limitar lo segundo, no lo primero.
+El enunciado prohíbe usar `page/pageSize` aunque el endpoint los soporte. Con 2000 empleados, renderizar todo es la trampa clásica: 2000 filas son ~20.000+ nodos de DOM, con scroll y re-renders caros. La distinción que terminó siendo la clave: **los datos en JS son baratos** (2000 objetos ≈ 2 MB) y **los nodos del DOM son caros** — lo que hay que limitar es lo segundo, no lo primero.
 
 Se compararon dos caminos:
 
 - **Paginación en el cliente** (`slice`): corta el array con `(page-1)*15 .. page*15` y el DOM siempre tiene exactamente 15 filas. Es un hook de ~35 líneas, sin dependencias, determinista y fácil de testear.
 - **Virtualización** (`react-window`): renderiza solo lo visible (~20–30 filas) y permite scroll continuo por las 2000.
 
-La razón de elegir `slice`: **ambos mantienen los 2000 objetos en memoria y ambos acotan el DOM**. La única diferencia verdadera es la UX de scroll continuo que aporta la virtualización, y a 2000 registros no vale la pena sumar una librería y su configuración (alturas de fila, sync del scroll con los filtros) por eso. Además, el punto 4 del enunciado pedía literalmente "paginación o carga incremental en el cliente" — que es justo lo que hace el `slice`.
+Se eligió `slice` porque **ambas opciones mantienen los 2000 objetos en memoria y ambas acotan el DOM**: la única diferencia real es la UX de scroll fluido que aporta la virtualización, y a 2000 registros no justifica sumar una librería y su configuración (alturas de fila, sincronizar el scroll con los filtros). El punto 4 del enunciado pedía literalmente "paginación o carga incremental en el cliente", que es justo lo que hace el `slice`.
 
-No es "siempre así", desde luego. Las reglas que quedaron escritas:
+No es "siempre así", obvio. Quedaron escritas las reglas:
 
 | Qué se usa | Cuándo |
 |---|---|
@@ -73,35 +71,57 @@ No es "siempre así", desde luego. Las reglas que quedaron escritas:
 | Virtualización | scroll infinito como requisito de producto sobre datos ya en memoria |
 | Decidir entre esas | ~10–20k filas: según pese más la UX del scroll o la red |
 
-**Sobre el plus opcional** (comparar la solución 100% cliente contra la variante paginada del backend): con 2000 registros, resolver todo en el cliente es la opción correcta porque el dataset cabe cómodo en memoria y evita depender del comportamiento exacto de los headers de paginación del backend (`X-Total-Count`, `X-Total-Pages`). La variante paginada del backend se volvería preferible si el dataset fuera demasiado grande — ahí sí importa acotar el payload de red por página, y además habilita deep-linking real (`?page=3` reflejando el estado del servidor, no solo un slice local). En resumen: cliente cuando el volumen es acotado y se prioriza simplicidad; backend cuando el volumen es grande o indeterminado y se prioriza red y escalabilidad.
+**Sobre el plus opcional** (comparar la solución 100 % cliente contra la variante paginada del backend): con 2000 registros, resolver todo en el cliente es lo correcto — el dataset cabe cómodo en memoria y evita depender del comportamiento exacto de los headers de paginación (`X-Total-Count`, `X-Total-Pages`). La variante del backend pasa a ser preferible cuando el volumen crece: ahí sí importa recortar el payload de red por página, y además habilita deep-linking de verdad (`?page=3` que refleja el estado del servidor, no un slice local). En síntesis: cliente cuando el volumen es acotado y se prioriza simplicidad; backend cuando es grande o indeterminado y se prioriza red y escalabilidad.
 
 ### Los filtros
 
-El enunciado pedía filtrar por `departmentName` y `positionName`, y la API lo soporta por query params (filtrando con igualdad exacta sobre los strings). Al intentar poblar los `<select>` desde `/api/employee/departments` y `/api/employee/departments/{id}/positions`, **todo llegaba vacío**. Al revisar el `Program.cs` del backend se confirmó: el seed solo siembra empleados, nunca crea las colecciones `Departments`/`Positions`.
+El enunciado pedía filtrar por `departmentName` y `positionName`, y la API lo soporta por query params (igualdad exacta sobre los strings). El problema apareció al poblar los `<select>` desde `/api/employee/departments` y `/api/employee/departments/{id}/positions`: **todo llegaba vacío**. Mirando el `Program.cs` del backend se confirmó el motivo — el seed solo siembra empleados, nunca crea las colecciones `Departments`/`Positions`.
 
-Por eso las opciones se derivan de los empleados cargados (`useEmployeeOptions`): garantiza que siempre hay opciones y que coinciden carácter a carácter con lo que la API filtra. El filtrado sigue siendo server-side; solo las *opciones* salen de los datos. Eso quedó documentado como supuesto, porque es exactamente el tipo de "el backend no es lo que parece" que un front tiene que saber capear.
+Por eso las opciones salen de los empleados cargados (`useEmployeeOptions`): así siempre hay opciones y coinciden carácter a carácter con lo que la API filtra. El filtrado sigue siendo server-side; lo único que se deriva de los datos son las *opciones*. Quedó registrado como supuesto porque es exactamente el tipo de "el backend no es lo que parece" que un front tiene que aprender a capear.
 
 ### El polling del reporte (4.b)
 
-El reporte es un job: se genera con un POST que devuelve un `executionId` y el resto es consultar el estado hasta que complete. Se resolvió con el `refetchInterval` de React Query, y fue deliberado no usar `setInterval` a mano: con `setInterval` un request puede salir mientras el anterior todavía está en vuelo, y hay que acordarse de limpiar el timer en cada ciclo de vida. React Query programa el siguiente poll recién cuando el anterior terminó, lo cancela solo si el hook se desmonta (navegar fuera de la vista) y aborta el fetch con el `signal`. No queda forma de dejar peticiones huérfanas sin intervención manual.
+El reporte es un job: un POST devuelve un `executionId` y el resto es consultar el estado hasta que complete. Se resolvió con el `refetchInterval` de React Query y a propósito no se usó `setInterval` a mano: con `setInterval` un request puede salir mientras el anterior sigue en vuelo, y hay que acordarse de limpiar el timer en cada ciclo de vida. React Query agenda el siguiente poll recién cuando el anterior terminó, lo cancela solo si el hook se desmonta (navegar fuera de la vista) y aborta el fetch con el `signal`. No queda forma de dejar requests huérfanas sin intervención manual.
 
 Además de `Completed`, el polling corta en dos casos que aparecieron al probar:
 
-- **Deadline de 60 s**: si el job no termina, hay que dejar de consultar. Se mide con `job.createdAt` porque `dataUpdatedAt` de React Query se renueva en cada response y no servía de ancla. Después del límite, la UI muestra "timeout" con botón de reintento.
-- **404**: el job vive en memoria del backend, así que si la API se reinicia el `executionId` deja de existir. Ante 404 se corta el polling en vez de consultar para siempre una respuesta que no va a cambiar.
+- **Deadline de 60 s**: si el job no termina, hay que dejar de preguntar. Se mide con `job.createdAt` porque `dataUpdatedAt` de React Query se renueva en cada response y no servía de ancla. Pasado el límite, la UI muestra "timeout" con botón de reintento.
+- **404**: el job vive en memoria del backend; si la API se reinicia, el `executionId` deja de existir. Ante 404 se corta el polling en vez de consultar para siempre algo que no va a cambiar.
 
 Los errores transitorios (red, 5xx) no cortan el polling: se reintenta en el siguiente ciclo. Y el intervalo crece con backoff (2 s → 4 s → 8 s) según cuánto lleva el job, para no bombardear al servidor.
+
+### Sesión y token: vivir con lo que el contrato da
+
+El backend entrega el JWT en el `body` del login (`LoginResponse.Token`), lo deja **persistido en Mongo** por usuario y no expone ningún endpoint de refresco ni cookies (no hay un solo `Set-Cookie`/`HttpOnly` en el contrato). Eso define las reglas del juego:
+
+- El token tiene que vivir en `localStorage` porque es legible por JS: es lo único que permite mantener sesión al recargar.
+- Cuando vence, un 401 lo resuelve todo: el interceptor central de `axiosInstance.ts` desloguea y vuelve a `/login`. Simple y predecible.
+
+La solución *responsable* a ese vacío requiere backend: access token de vida corta + un `refresh_token` real en cookie `HttpOnly`/`Secure`/`SameSite`, y reintento *single-flight* de las requests rechazadas en el interceptor de respuesta. Sin acceso al backend, esa vía no existe, y acá es donde vale la pena explicitar lo que **no** se hizo: guardar las credenciales para hacer un re-login silencioso. Encriptarlas en el cliente con una clave que también viaja en el bundle es criptografía cosmética — termina siendo peor que el JWT en `localStorage`.
+
+### Estilos con Tailwind CSS
+
+Los estilos usan **Tailwind CSS v4** con su plugin oficial de Vite (`@tailwindcss/vite` en `vite.config.ts`): no hay `tailwind.config.js` ni `postcss.config.js`, y el CSS base se declara con un solo `@import "tailwindcss"` en `src/index.css`.
+
+- Las utilidades se aplican directo en el JSX (layout, espaciado, tipografía, colores, estados `hover`/`disabled`), con la paleta apoyada en `slate`/`blue`/`amber`/`emerald`.
+- La tipografía (Inter) entra por Google Fonts y se aplica en el `@layer base` con `@apply`, junto con el fondo y el color del `body`.
+- Sin lógica de estilos en JavaScript: nada de `styled-components`, CSS Modules ni archivos `.css` por componente. Tailwind además participa del *tree shaking* — solo se emite el CSS de las clases que realmente aparecen.
 
 ## Supuestos asumidos
 
 1. El filtrado lo hace el backend (params `departmentName`/`positionName`, igualdad exacta); los valores vacíos se omiten.
-2. Las opciones de los filtros se derivan de los empleados porque el seed del backend no puebla las colecciones `Departments`/`Positions` (verificado en `Program.cs`).
+2. Las opciones de los filtros se derivan de los empleados porque el seed no puebla `Departments`/`Positions` (verificado en `Program.cs`).
 3. La paginación es solo de presentación: jamás se manda `page/pageSize`.
-4. No hay refresco de token: al vencer el JWT, el 401 desloguea. Queda como mejora.
+4. La vista de **dispositivos** (`GET /api/device`) queda fuera de alcance: el endpoint existe y funciona, pero —igual que `Departments`/`Positions`— la colección `Devices` no se siembra en el arranque (`Program.cs` solo ejecuta `SeedEmployeesAsync` y `SeedPunchTypesAsync`), así que responde `[]` sin que nadie haya creado dispositivos. Como el backend es intocable y ese flujo no estaba entre los objetivos centrales, no se sumó una vista que dependería de datos que no existen en el entorno de entrega. Si algún día se agrega, reutilizaría la estrategia del directorio (hook + paginación cliente + estados vacío/error).
 
 ## Tests
 
-`npm test` → 8 tests. Se priorizó testear la lógica de negocio pura (hooks) antes que el renderizado de componentes, porque son funciones deterministas fáciles de aislar y es donde vive la decisión de arquitectura de 4.a:
+`npm test` → 12 tests. Se priorizaron los unitarios (lógica pura) y se sumó un test de integración para el flujo completo de la tabla:
 
 - `useEmployeePagination.test.ts` — slice por página, cambio de página, última página, cambio de `pageSize` y lista vacía.
 - `employeeOptions.test.ts` — opciones únicas y ordenadas, cubriendo el caso del seed vacío de `Departments`/`Positions`.
+- `EmployeeTable.integration.test.tsx` — cablea los hooks reales (`useEmployees` + `useEmployeePagination`) igual que hace `DashboardPage` y prueba la tabla de punta a punta: carga desde la API, paginación en el cliente (siguiente página), estado vacío y banner de error. La API se mockea **a nivel de módulo** con `vi.mock` sobre `api/axiosInstance` (con `vi.hoisted` para el mock del arreglo): no hay red real ni dependencias extra (a diferencia de MSW, que habría que instalar). Para correrlo solo:
+
+```bash
+npx vitest run src/components/EmployeeTable.integration.test.tsx
+```

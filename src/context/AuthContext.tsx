@@ -1,11 +1,9 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import type { User, AuthContextType, LoginRequest, LoginResponse } from '../types/auth';
+import type { User, LoginRequest, LoginResponse } from '../types/auth';
+import { AuthContext } from './auth';
 import { api, tokenStorage, setUnauthorizedRequest } from '../api/axiosInstance';
 import { readStoredUser, saveStoredUser, clearStoredUser } from '../utils/userStorage';
-
-// Crea el contexto de autenticación
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Provee el contexto de autenticación a los componentes hijos
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -67,16 +65,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-};
-
-// Hook personalizado para acceder al contexto de autenticación
-export const useAuth = (): AuthContextType => {
-  // Obtiene el contexto de autenticación
-  const context = useContext(AuthContext);
-  // Si no existe el contexto, lanza un error
-  if (!context) {
-    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
-  }
-  // Retorna el contexto de autenticación
-  return context;
 };

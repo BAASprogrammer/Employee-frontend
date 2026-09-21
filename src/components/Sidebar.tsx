@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, X } from 'lucide-react';
 import type { SidebarProps } from '../types/sidebar';
 import { NAV_ITEMS } from '../constants/navigation';
 
@@ -9,21 +9,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onTabChange,
   onLogout,
+  mobileOpen,
+  onCloseMobile,
 }) => {
   const initials = user?.username
     ? user.username.slice(0, 2).toUpperCase()
     : 'US';
 
-  return (
-    <aside className="w-56 bg-slate-950 text-white flex flex-col justify-between shrink-0">
+  const content = (withClose: boolean) => (
+    <>
       <div>
-        {/* Marca */}
-        <div className="px-4 py-5">
+        {/* Marca (con botón de cierre en el drawer móvil) */}
+        <div className="px-4 py-5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 mb-1">
             <div>
               <p className="text-sm font-bold text-white tracking-tight leading-none">Portal de Empleados</p>
             </div>
           </div>
+          {withClose && (
+            <button
+              type="button"
+              className="p-1.5 -mr-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              onClick={onCloseMobile}
+              aria-label="Cerrar menú"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
 
         {/* Divisor */}
@@ -88,6 +100,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Sidebar de escritorio */}
+      <aside className="hidden md:flex w-56 bg-slate-950 text-white flex-col justify-between shrink-0">
+        {content(false)}
+      </aside>
+
+      {/* Drawer móvil con hamburguesa */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div
+            className="absolute inset-0 bg-slate-950/70"
+            onClick={onCloseMobile}
+          />
+          <aside className="absolute inset-y-0 left-0 w-56 bg-slate-950 text-white flex flex-col justify-between shadow-2xl">
+            {content(true)}
+          </aside>
+        </div>
+      )}
+    </>
   );
 };

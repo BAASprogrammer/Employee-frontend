@@ -7,4 +7,6 @@ export interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   onLogout: () => void;
+  mobileOpen: boolean;
+  onCloseMobile: () => void;
 }

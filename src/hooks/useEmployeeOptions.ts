@@ -1,12 +1,7 @@
 import { useMemo } from 'react';
 import type { Employee } from '../types/employee';
+import type { UseEmployeeOptionsResult } from '../types/useEmployeeOptions';
 import { getDepartmentOptions, getPositionOptions } from '../utils/employeeOptions';
-
-// Interface que define el resultado del hook useEmployeeOptions
-export interface UseEmployeeOptionsResult {
-  departmentOptions: string[];
-  positionOptions: string[];
-}
 
 // Hook que deriva las opciones únicas de departamento y cargo desde el dataset
 // completo de empleados (no desde las colecciones Departments/Positions de la API,

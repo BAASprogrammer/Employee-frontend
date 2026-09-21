@@ -1,5 +1,4 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { isAxiosError } from 'axios';
 import { api } from '../api/axiosInstance';
 import { REPORT_STATUS } from '../types/report';
 import type { ReportGenerationResponse, ReportJob } from '../types/report';
@@ -8,10 +7,6 @@ import type { ReportGenerationResponse, ReportJob } from '../types/report';
 export const STATUS_POLLING_MS = 2000;
 // Deadline global: si el job no completa en este tiempo, se abandona el polling
 export const STATUS_MAX_WAIT_MS = 60_000;
-
-// Extrae el status HTTP de un error de axios (undefined si no aplica)
-const getHttpStatus = (error: unknown): number | undefined =>
-  isAxiosError(error) ? error.response?.status : undefined;
 
 // Dispara la generación del reporte (POST /api/report/generate)
 export const useCreateReport = () =>
@@ -35,7 +30,7 @@ export const useReportStatus = (executionId: string | null) =>
       api.get<ReportJob>(`/api/report/${executionId}/status`, { signal }).then((response) => response.data),
     // Habilita la query cuando el executionId no es null
     enabled: !!executionId,
-    // Sin reintentos automáticos: el propio polling continúa pese a errores transitorios
+    // Sin reintentos automáticos: el polling mismo es el reintento, y corta ante error
     retry: false,
     // Programa el siguiente poll; devolver false detiene el polling
     refetchInterval: (query) => {
@@ -44,25 +39,35 @@ export const useReportStatus = (executionId: string | null) =>
       // Estado terminal: Completed corta el polling
       if (job?.status === REPORT_STATUS.COMPLETED) return false;
 
-      // Deadline global: si el job jamás llega a Completed, abandonar el polling
+      // Sin conexión: sin internet el fetch no falla, se pausa
+      // (fetchStatus === 'paused' en vez de un error). No hay nada que
+      // consultar hasta volver online, así que también se corta el polling.
+      if (query.state.fetchStatus === 'paused') return false;
+
+      // Cualquier error (500, sin internet/red, 404) corta el polling: no se
+      // insiste sobre una respuesta que no va a mejorar por sí sola. La UI
+      // muestra el error con opción de reintento (nuevo job).
+      if (query.state.status === 'error') return false;
+
+      // Deadline global: si el job jamás llega a Completed (sin errores), abandonar
       const createdAt = job?.createdAt ? Date.parse(job.createdAt) : null;
+
+      // Fecha de creación del job (si no existe, se usa la fecha de la query)
       const anchor =
         createdAt !== null && !Number.isNaN(createdAt) ? createdAt : query.state.dataUpdatedAt;
+      // Tiempo transcurrido desde la creación del job
       const elapsed = Date.now() - anchor;
-      if (job && elapsed >= STATUS_MAX_WAIT_MS) return false;
-
-      // Error permanente (404: el job ya no existe en memoria) corta el polling;
-      // los errores transitorios (red, 5xx) no lo cortan: se reintenta en el próximo poll
-      if (query.state.status === 'error') {
-        return getHttpStatus(query.state.error) === 404 ? false : STATUS_POLLING_MS;
-      }
+      if (elapsed >= STATUS_MAX_WAIT_MS) return false;
 
       // Aún sin primer dato: seguir consultando
       if (!job) return STATUS_POLLING_MS;
 
       // Backoff progresivo según cuánto lleva el job procesando
+      // Si lleva menos de 10 segundos, consultar cada 2 segundos
       if (elapsed < 10_000) return STATUS_POLLING_MS;
+      // Si lleva menos de 30 segundos, consultar cada 4 segundos
       if (elapsed < 30_000) return STATUS_POLLING_MS * 2;
+      // Si lleva más de 30 segundos, consultar cada 8 segundos
       return STATUS_POLLING_MS * 4;
     },
   });
