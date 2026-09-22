@@ -94,7 +94,9 @@ export const DashboardPage: React.FC = () => {
   // Manejo del cierre de sesión
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    // replace: el dashboard sale del historial y el botón "atrás" no puede
+    // volver a una página autenticada después del logout
+    navigate('/login', { replace: true });
   };
 
   // Cambio de pestaña (cierra el menú móvil al navegar)
