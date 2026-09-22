@@ -89,7 +89,7 @@ Por eso las opciones salen de los empleados cargados (`useEmployeeOptions`): as�
 
 La sección quedó así:
 
-- **Listado** con `useDevices` (`GET /api/device`), decoupleado por props como `EmployeeTable` y con los mismos estados: carga, vacío (con CTA a dar de alta), error y desconexión.
+- **Listado** con `useDevices` (`GET /api/device`), desacoplado por props como `EmployeeTable` y con los mismos estados: carga, vacío (con CTA a dar de alta), error y desconexión.
 - **Paginación en el cliente**: los dispositivos aplican la *misma* estrategia anti-sobrecarga de la sección 4.a que el directorio — el slice lo resuelve el hook genérico `useClientPagination` (que `useEmployeePagination` también reutiliza), nunca se renderizan más de 15 filas y se muestra el `PaginationBar`. Si la última fila de la última página se borra, la página retrocede a la última válida en vez de quedar vacía.
 - **Alta y edición** con un formulario inline (`POST` y `PUT`) que valida en el cliente los requeridos del schema (`name` ≥ 2 chars, `location`, `timezone`) y usa `mutateAsync`, con invalidación de la cache al completar.
 - **Borrado** (`DELETE`) con un modal de confirmación propio.
