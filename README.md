@@ -23,7 +23,7 @@ La base URL se toma de `VITE_API_URL` desde el archivo `.env` (por defecto `http
 
 - **Login**: llama a `POST /api/auth/login`, guarda el JWT en `localStorage` y un interceptor de axios lo agrega como `Authorization: Bearer` en cada request. Si llega un 401, la sesión se cierra y se vuelve a `/login`. El gancho se registra desde `AuthContext` con `setUnauthorizedRequest`, así axios no conoce React y no se generan dependencias circulares. Al abrir la app se valida que el token no haya vencido (`src/utils/jwt.ts`).
 - **Directorio**: consume `GET /api/employee` **sin `page/pageSize`** (como pide el enunciado), filtrando por `departmentName` y `positionName` del lado del backend. La paginación se resuelve **en el cliente**, nunca se renderizan más de 15 filas y se cubren los estados de carga, vacío y error.
-- **Reporte**: `POST /api/report/generate` → `executionId` → polling cada 2 s contra `/api/report/{id}/status` hasta `Completed`, con backoff y un tope de 60 s.
+- **Reporte**: `POST /api/report/generate` → `executionId` → polling cada 2 s contra `/api/report/{id}/status` hasta `Completed`, con backoff y un tope de 20 s.
 - **Dispositivos**: CRUD completo contra `GET/POST/PUT/DELETE /api/device` con **paginación en el cliente** (la misma estrategia 4.a). La colección `Devices` no se siembra en el arranque (igual que `Departments`/`Positions`), así que la tabla arranca vacía a propósito y se **puebla desde la propia vista**: formulario inline para dar de alta (POST) y editar (PUT), y borrado (DELETE) con confirmación. Se cubren los estados de carga, vacío, error y desconexión.
 
 ## Estructura
@@ -101,11 +101,11 @@ El reporte es un job: un POST devuelve un `executionId` y el resto es consultar 
 
 El polling corta en `Completed` y en tres casos más que aparecieron al probar:
 
-- **Deadline de 60 s**: si el job no termina, hay que dejar de preguntar. Se mide con `job.createdAt` porque `dataUpdatedAt` de React Query se renueva en cada response y no servía de ancla. Pasado el límite, la UI muestra "timeout" con botón de reintento.
+- **Deadline de 20 s**: si el job no termina, hay que dejar de preguntar. Se mide con `job.createdAt` porque `dataUpdatedAt` de React Query se renueva en cada response y no servía de ancla. Pasado el límite, la UI muestra "timeout" con botón de reintento.
 - **Error (404, 5xx, red)**: cualquier error corta el polling en el primer fallo (`retry: false`) — el polling mismo ya *es* el mecanismo de reintento, y si falla no hay estado del lado del servidor que vaya a mejorar solo: un 404 es un job que ya no existe (vive en memoria del backend) y un 5xx o un error de red no se resuelven preguntando otra vez. La UI muestra el mensaje del error con un botón manual "Reintentar generación" que dispara un job nuevo.
 - **Sin conexión**: la desconexión no produce un error sino que TanStack pausa la petición (`fetchStatus === 'paused'` a través de su *online manager*). El polling también se corta acá, y la UI muestra un aviso "Sin conexión: se pausó el seguimiento del reporte" con su propio reintento al volver.
 
-Cuando el polling sigue activo, el intervalo crece con backoff (2 s → 4 s → 8 s) según cuánto lleva el job, para no bombardear al servidor.
+Cuando el polling sigue activo, el intervalo crece con backoff (2 s → 4 s) acotado por el deadline: 2 s mientras el job lleva menos de la mitad del tope (10 s) y 4 s después, para no bombardear al servidor y sin programar polls que ya no caben dentro del límite.
 
 ### Sesión y token: vivir con lo que el contrato da
 

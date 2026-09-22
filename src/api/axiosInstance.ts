@@ -21,10 +21,10 @@ export const tokenStorage = {
     }
 }
 // Maneja el error 401 unauthorized
-let unauthorizedRequest: (() => void) | null = null;
+let unAuthorizedRequest: (() => void) | null = null;
 // Establece el callback para manejar el error 401 unauthorized
 export const setUnauthorizedRequest = (callback: (() => void) | null) => {
-    unauthorizedRequest = callback;
+    unAuthorizedRequest = callback;
 }
 
 // Creación de la instancia de axios con la URL base y headers
@@ -52,7 +52,7 @@ api.interceptors.response.use(
     (error: AxiosError) => {
         const isLogin = error.config?.url === LOGIN_PATH;
         if (error.response?.status === 401 && !isLogin) {
-            unauthorizedRequest?.(); // tu handler de sesión expirada
+            unAuthorizedRequest?.(); // tu handler de sesión expirada
         }
         return Promise.reject(error); // se rechaza el error original, no un string
     },

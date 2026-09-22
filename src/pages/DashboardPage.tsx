@@ -57,7 +57,7 @@ export const DashboardPage: React.FC = () => {
     totalItems,
   } = useEmployeePagination(employees, 15);
 
-  // Dispositivos: listado + mutations de alta/edición/borrado
+  // Dispositivos: listado + mutations de creación/actualización/eliminación
   const {
     devices,
     isLoading: devicesLoading,

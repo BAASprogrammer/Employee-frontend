@@ -5,8 +5,11 @@ import type { ReportGenerationResponse, ReportJob } from '../types/report';
 
 // Intervalo inicial de polling del estado del reporte (ms)
 export const STATUS_POLLING_MS = 2000;
-// Deadline global: si el job no completa en este tiempo, se abandona el polling
-export const STATUS_MAX_WAIT_MS = 60_000;
+// Deadline global: si el job no completa en este tiempo, se abandona el polling.
+// 20 s deja ~2.5x de holgura sobre el ~8 s que tarda el job real: el backoff
+// (2 s hasta la mitad, 4 s después) detecta el Completed con margen de sobra y
+// el cap solo resguarda casos donde el job nunca termina.
+export const STATUS_MAX_WAIT_MS = 20_000;
 
 // Dispara la generación del reporte (POST /api/report/generate)
 export const useCreateReport = () =>
@@ -62,12 +65,12 @@ export const useReportStatus = (executionId: string | null) =>
       // Aún sin primer dato: seguir consultando
       if (!job) return STATUS_POLLING_MS;
 
-      // Backoff progresivo según cuánto lleva el job procesando
-      // Si lleva menos de 10 segundos, consultar cada 2 segundos
-      if (elapsed < 10_000) return STATUS_POLLING_MS;
-      // Si lleva menos de 30 segundos, consultar cada 4 segundos
-      if (elapsed < 30_000) return STATUS_POLLING_MS * 2;
-      // Si lleva más de 30 segundos, consultar cada 8 segundos
-      return STATUS_POLLING_MS * 4;
+      // Backoff acotado por el deadline: los escalones van en función de
+      // STATUS_MAX_WAIT_MS para que nunca se programe un poll que ya no tiene
+      // cabida dentro del tope (con 20 s: 2 s hasta la mitad, 4 s después).
+      // Si lleva menos de la mitad del deadline, consultar cada 2 segundos
+      if (elapsed < STATUS_MAX_WAIT_MS / 2) return STATUS_POLLING_MS;
+      // Si ya pasó la mitad, consultar cada 4 segundos
+      return STATUS_POLLING_MS * 2;
     },
   });

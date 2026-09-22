@@ -11,9 +11,8 @@ import { PaginationBar } from './PaginationBar';
 // Valores iniciales del formulario al dar de alta
 const EMPTY_FORM: DeviceInput = { name: '', location: '', timezone: '' };
 
-// Tabla de dispositivos con alta, edición y borrado vía la API. Aplica la misma
-// estrategia anti-sobrecarga de la sección 4.a que el directorio: el padre le
-// pasa el slice de la página actual (useClientPagination) y acá solo se renderiza
+// Tabla de dispositivos, aplica la misma estrategia anti-sobrecarga de la sección 4.a que el directorio: 
+// el padre le pasa el slice de la página actual (useClientPagination) y acá solo se renderiza
 // el PaginationBar para navegar. El formulario (DeviceForm) y el modal de
 // confirmación (ConfirmModal) viven en sus propios archivos.
 export const DeviceTable: React.FC<DeviceTableProps> = ({

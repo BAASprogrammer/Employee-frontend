@@ -39,13 +39,20 @@ export const ReportCard: React.FC = () => {
   // Si el job sigue Processing y supera el deadline, cambia a estado "tiempo agotado".
   // El polling ya se detuvo solo (STATUS_MAX_WAIT_MS en useReport); acá solo se refleja en la UI.
   useEffect(() => {
+    // Si no hay un executionId o el job ya completó, no hay nada que hacer
     if (!executionId || job?.status === REPORT_STATUS.COMPLETED) return;
+    // Si el job está en progreso y supera el deadline, se detiene el seguimiento
     const createdAt = job?.createdAt ? Date.parse(job.createdAt) : null;
+    // Si el createdAt no es válido, se usa el tiempo actual para calcular el timeout
     const anchor = createdAt !== null && !Number.isNaN(createdAt) ? createdAt : Date.now();
+    // Inicia un temporizador para detectar timeout
     const timer = window.setTimeout(
+      // Si el job está en progreso y supera el deadline, se detiene el seguimiento
       () => setTimedOut(true),
+      // El timeout se calcula en base al tiempo de creación del job y el deadline
       Math.max(0, anchor + STATUS_MAX_WAIT_MS - Date.now())
     );
+    // Limpia el temporizador cuando el componente se desmonta
     return () => window.clearTimeout(timer);
   }, [executionId, job?.createdAt, job?.status]);
 
