@@ -6,15 +6,24 @@ import type { Device, DeviceInput } from '../types/device';
 import type { DeviceTableProps } from '../types/deviceTable';
 import { DeviceForm } from './DeviceForm';
 import { ConfirmModal } from './ConfirmModal';
+import { PaginationBar } from './PaginationBar';
 
 // Valores iniciales del formulario al dar de alta
 const EMPTY_FORM: DeviceInput = { name: '', location: '', timezone: '' };
 
-// Tabla de dispositivos con alta, edición y borrado vía la API.
-// El formulario (DeviceForm) y el modal de confirmación (ConfirmModal) viven
-// en sus propios archivos; acá queda la tabla, el estado de apertura y el cableado.
+// Tabla de dispositivos con alta, edición y borrado vía la API. Aplica la misma
+// estrategia anti-sobrecarga de la sección 4.a que el directorio: el padre le
+// pasa el slice de la página actual (useClientPagination) y acá solo se renderiza
+// el PaginationBar para navegar. El formulario (DeviceForm) y el modal de
+// confirmación (ConfirmModal) viven en sus propios archivos.
 export const DeviceTable: React.FC<DeviceTableProps> = ({
-  devices,
+  currentPageDevices,
+  currentPage,
+  totalPages,
+  totalItems,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
   isLoading,
   isFetching,
   isOffline,
@@ -79,11 +88,20 @@ export const DeviceTable: React.FC<DeviceTableProps> = ({
         <div>
           <h3 className="text-sm font-bold text-slate-900">Dispositivos</h3>
           <p className="text-[11px] text-slate-400">
-            {devices.length === 0 ? 'Sin dispositivos registrados' : `${devices.length} dispositivos registrados`}
+            {totalItems === 0 ? 'Sin dispositivos registrados' : `${totalItems} dispositivos registrados · paginación activa`}
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-500">Por página:</span>
+          <select
+            value={pageSize}
+            onChange={(e) => onPageSizeChange(Number(e.target.value))}
+            className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 cursor-pointer"
+          >
+            {[10, 15, 25, 50, 75, 100].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+
           <button
             onClick={openCreate}
             disabled={mutationPending}
@@ -140,7 +158,7 @@ export const DeviceTable: React.FC<DeviceTableProps> = ({
         <div className="mx-5 mt-3 p-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-xs flex items-center gap-2">
           <WifiOff size={14} className="shrink-0" />
           <span>
-            {devices.length > 0
+            {totalItems > 0
               ? 'Sin conexión: mostrando resultados guardados del último contacto con el servidor.'
               : 'Sin conexión: no se pudieron cargar los dispositivos.'}
           </span>
@@ -162,7 +180,7 @@ export const DeviceTable: React.FC<DeviceTableProps> = ({
             <div className="w-7 h-7 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
             <span className="text-sm">Cargando dispositivos...</span>
           </div>
-        ) : devices.length === 0 ? (
+        ) : totalItems === 0 ? (
           isOffline ? (
             <div className="flex flex-col items-center justify-center gap-2 py-20 text-slate-400">
               <WifiOff size={36} className="text-slate-200" />
@@ -177,7 +195,7 @@ export const DeviceTable: React.FC<DeviceTableProps> = ({
             </div>
           )
         ) : (
-          devices.map((device) => (
+          currentPageDevices.map((device) => (
             <div
               key={device.id ?? device.name}
               className="grid grid-cols-[1.4fr_1.4fr_1.4fr_5rem] gap-3 px-5 py-3 border-b border-slate-100 text-xs text-slate-700 items-center hover:bg-slate-50/60"
@@ -236,6 +254,15 @@ export const DeviceTable: React.FC<DeviceTableProps> = ({
           onCancel={() => setPendingDelete(null)}
         />
       )}
+
+      <PaginationBar
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={pageSize}
+        itemLabel="dispositivos"
+        onPageChange={onPageChange}
+      />
     </section>
   );
 };

@@ -4,5 +4,6 @@ export interface PaginationBarProps {
   totalPages: number;
   totalItems: number;
   pageSize: number;
+  itemLabel?: string;
   onPageChange: (page: number) => void;
 }

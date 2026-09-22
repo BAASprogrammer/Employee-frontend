@@ -7,12 +7,13 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
   totalPages,
   totalItems,
   pageSize,
+  itemLabel = 'empleados',
   onPageChange,
 }) => {
   return (
     <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 shrink-0 bg-slate-50/50">
       <span className="text-xs text-slate-500">
-        {totalItems === 0 ? '0' : `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalItems)}`} de <strong className="text-slate-700">{totalItems}</strong> empleados
+        {totalItems === 0 ? '0' : `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalItems)}`} de <strong className="text-slate-700">{totalItems}</strong> {itemLabel}
       </span>
       <div className="flex items-center gap-1">
         <button

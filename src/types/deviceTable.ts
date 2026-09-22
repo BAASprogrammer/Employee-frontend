@@ -1,8 +1,16 @@
 import type { Device, DeviceInput } from './device';
 
-// Interface que define las propiedades de la tabla de dispositivos
+// Interface que define las propiedades de la tabla de dispositivos. Sigue el
+// mismo patrón desacoplado de EmployeeTable: recibe el slice de la página
+// actual junto con los datos de la paginación en el cliente (estrategia 4.a).
 export interface DeviceTableProps {
-  devices: Device[];
+  currentPageDevices: Device[];
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
   isLoading: boolean;
   isFetching: boolean;
   isOffline: boolean;

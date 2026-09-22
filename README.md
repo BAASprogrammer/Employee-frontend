@@ -24,7 +24,7 @@ La base URL se toma de `VITE_API_URL` desde el archivo `.env` (por defecto `http
 - **Login**: llama a `POST /api/auth/login`, guarda el JWT en `localStorage` y un interceptor de axios lo agrega como `Authorization: Bearer` en cada request. Si llega un 401, la sesión se cierra y se vuelve a `/login`. El gancho se registra desde `AuthContext` con `setUnauthorizedRequest`, así axios no conoce React y no se generan dependencias circulares. Al abrir la app se valida que el token no haya vencido (`src/utils/jwt.ts`).
 - **Directorio**: consume `GET /api/employee` **sin `page/pageSize`** (como pide el enunciado), filtrando por `departmentName` y `positionName` del lado del backend. La paginación se resuelve **en el cliente**, nunca se renderizan más de 15 filas y se cubren los estados de carga, vacío y error.
 - **Reporte**: `POST /api/report/generate` → `executionId` → polling cada 2 s contra `/api/report/{id}/status` hasta `Completed`, con backoff y un tope de 60 s.
-- **Dispositivos**: CRUD completo contra `GET/POST/PUT/DELETE /api/device`. La colección `Devices` no se siembra en el arranque (igual que `Departments`/`Positions`), así que la tabla arranca vacía a propósito y se **puebla desde la propia vista**: formulario inline para dar de alta (POST) y editar (PUT), y borrado (DELETE) con confirmación. Se cubren los estados de carga, vacío, error y desconexión.
+- **Dispositivos**: CRUD completo contra `GET/POST/PUT/DELETE /api/device` con **paginación en el cliente** (la misma estrategia 4.a). La colección `Devices` no se siembra en el arranque (igual que `Departments`/`Positions`), así que la tabla arranca vacía a propósito y se **puebla desde la propia vista**: formulario inline para dar de alta (POST) y editar (PUT), y borrado (DELETE) con confirmación. Se cubren los estados de carga, vacío, error y desconexión.
 
 ## Estructura
 
@@ -35,7 +35,8 @@ src/
 ├── hooks/
 │   ├── useEmployees.ts         # consulta con filtros (server-side, sin paginar)
 │   ├── useEmployeeOptions.ts   # opciones de deptos/cargos desde los empleados
-│   ├── useEmployeePagination.ts  # slice por página, en el cliente
+│   ├── useClientPagination.ts  # paginación genérica en el cliente (slice, 4.a)
+│   ├── useEmployeePagination.ts  # wrap de useClientPagination para empleados
 │   ├── useDevices.ts           # listado + alta/edición/borrado de dispositivos
 │   ├── useOnlineStatus.ts      # estado de red global, compartido por las vistas
 │   └── useReport.ts            # genera el job y pollea su estado
@@ -89,9 +90,10 @@ Por eso las opciones salen de los empleados cargados (`useEmployeeOptions`): as�
 La sección quedó así:
 
 - **Listado** con `useDevices` (`GET /api/device`), decoupleado por props como `EmployeeTable` y con los mismos estados: carga, vacío (con CTA a dar de alta), error y desconexión.
+- **Paginación en el cliente**: los dispositivos aplican la *misma* estrategia anti-sobrecarga de la sección 4.a que el directorio — el slice lo resuelve el hook genérico `useClientPagination` (que `useEmployeePagination` también reutiliza), nunca se renderizan más de 15 filas y se muestra el `PaginationBar`. Si la última fila de la última página se borra, la página retrocede a la última válida en vez de quedar vacía.
 - **Alta y edición** con un formulario inline (`POST` y `PUT`) que valida en el cliente los requeridos del schema (`name` ≥ 2 chars, `location`, `timezone`) y usa `mutateAsync`, con invalidación de la cache al completar.
 - **Borrado** (`DELETE`) con un modal de confirmación propio.
-- Sin librerías extra: el formulario inline y el modal de confirmación se resuelven con JSX + Tailwind (sin dependency de modales), en línea con la política de dependencias del resto del proyecto. Los dispositivos no se pagan porque el volumen real es chico; si creciera, se reutilizaría `useEmployeePagination`.
+- Sin librerías extra: el formulario inline, el modal de confirmación y la paginación (reuso de `useClientPagination`) se resuelven con JSX + Tailwind y el hook ya existente, en línea con la política de dependencias del resto del proyecto.
 
 ### El polling del reporte (4.b)
 
@@ -131,8 +133,9 @@ Los estilos usan **Tailwind CSS v4** con su plugin oficial de Vite (`@tailwindcs
 
 ## Tests
 
-`npm test` → 12 tests. Se priorizaron los unitarios (lógica pura) y se sumó un test de integración para el flujo completo de la tabla:
+`npm test` → 16 tests. Se priorizaron los unitarios (lógica pura) y se sumó un test de integración para el flujo completo de la tabla:
 
+- `useClientPagination.test.ts` — la paginación genérica que comparten directorio y dispositivos: slice por página, cambio de página, retroceso a la última página válida cuando el dataset se achica y lista vacía.
 - `useEmployeePagination.test.ts` — slice por página, cambio de página, última página, cambio de `pageSize` y lista vacía.
 - `employeeOptions.test.ts` — opciones únicas y ordenadas, cubriendo el caso del seed vacío de `Departments`/`Positions`.
 - `EmployeeTable.integration.test.tsx` — cablea los hooks reales (`useEmployees` + `useEmployeePagination`) igual que hace `DashboardPage` y prueba la tabla de punta a punta: carga desde la API, paginación en el cliente (siguiente página), estado vacío y banner de error. La API se mockea **a nivel de módulo** con `vi.mock` sobre `api/axiosInstance` (con `vi.hoisted` para el mock del arreglo): no hay red real ni dependencias extra (a diferencia de MSW, que habría que instalar). Para correrlo solo:

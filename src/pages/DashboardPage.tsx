@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEmployees } from '../hooks/useEmployees';
 import { useEmployeeOptions } from '../hooks/useEmployeeOptions';
 import { useEmployeePagination } from '../hooks/useEmployeePagination';
+import { useClientPagination } from '../hooks/useClientPagination';
 import { useDevices, useCreateDevice, useUpdateDevice, useDeleteDevice } from '../hooks/useDevices';
 import { Sidebar } from '../components/Sidebar';
 import { EmployeeTable } from '../components/EmployeeTable';
@@ -71,6 +72,18 @@ export const DashboardPage: React.FC = () => {
   const mutationError = createDevice.error || updateDevice.error || deleteDevice.error;
   const mutationPending = createDevice.isPending || updateDevice.isPending || deleteDevice.isPending;
 
+  // Paginación en el cliente para dispositivos: la misma estrategia
+  // anti-sobrecarga de la sección 4.a que se usa en el directorio (slice).
+  const {
+    currentPage: deviceCurrentPage,
+    setCurrentPage: setDeviceCurrentPage,
+    pageSize: devicePageSize,
+    setPageSize: setDevicePageSize,
+    currentPageItems: currentPageDevices,
+    totalPages: deviceTotalPages,
+    totalItems: deviceTotalItems,
+  } = useClientPagination(devices, 15);
+
   const handleCreateDevice = (input: DeviceInput): Promise<void> =>
     createDevice.mutateAsync(input).then(() => undefined);
   const handleUpdateDevice = (id: string, input: DeviceInput): Promise<void> =>
@@ -129,7 +142,7 @@ export const DashboardPage: React.FC = () => {
               {activeTab === 'reporte'
                 ? 'Generación asíncrona de reportes con polling'
                 : activeTab === 'dispositivos'
-                  ? `${devices.length} dispositivos registrados`
+                  ? `${devices.length} dispositivos registrados · paginación activa`
                   : `${employees.length} registros cargados · paginación activa`}
             </p>
           </div>
@@ -151,7 +164,13 @@ export const DashboardPage: React.FC = () => {
             /* Vista de dispositivos: lista + alta/edición/borrado vía la API */
             <div className="flex flex-1 min-h-0">
               <DeviceTable
-                devices={devices}
+                currentPageDevices={currentPageDevices}
+                currentPage={deviceCurrentPage}
+                totalPages={deviceTotalPages}
+                totalItems={deviceTotalItems}
+                pageSize={devicePageSize}
+                onPageChange={setDeviceCurrentPage}
+                onPageSizeChange={setDevicePageSize}
                 isLoading={devicesLoading}
                 isFetching={devicesFetching}
                 isOffline={devicesOffline}
