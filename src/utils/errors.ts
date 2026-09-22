@@ -18,3 +18,13 @@ export function getErrorMessage(error: unknown): string {
     }
     return 'Ocurrió un error inesperado';
 }
+
+// Mensaje contextual del error del reporte: un 404 del estado del job no es
+// "no se encontraron resultados" — el job vive en memoria del backend y, si la
+// API se reinició, esa executionId ya no existe.
+export function getReportErrorMessage(error: unknown): string {
+  if (axios.isAxiosError(error) && error.response?.status === 404) {
+    return 'El reporte ya no está disponible: Reintenta la generación.';
+  }
+  return getErrorMessage(error);
+}

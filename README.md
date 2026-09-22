@@ -44,7 +44,7 @@ src/
 ├── components/                 # EmployeeTable, DeviceTable, DeviceForm, ConfirmModal, ReportCard, Sidebar, ...
 ├── routes/AppRoutes.tsx        # rutas + guard de autenticación
 ├── types/                      # tipos que reflejan lo que la API devuelve
-└── utils/                      # errors (mensajes legibles), tokenStorage, userStorage, jwt, avatar, employeeOptions
+└── utils/                      # errors, report (polling), tokenStorage, userStorage, jwt, avatar, employeeOptions
 ```
 
 ## Decisiones tomadas (y por qué)
@@ -133,11 +133,14 @@ Los estilos usan **Tailwind CSS v4** con su plugin oficial de Vite (`@tailwindcs
 
 ## Tests
 
-`npm test` → 16 tests. Se priorizaron los unitarios (lógica pura) y se sumó un test de integración para el flujo completo de la tabla:
+`npm test` → 30 tests en 7 archivos. Se priorizaron los unitarios (lógica pura) y las integraciones de los flujos que más importan (directorio, dispositivos):
 
 - `useClientPagination.test.ts` — la paginación genérica que comparten directorio y dispositivos: slice por página, cambio de página, retroceso a la última página válida cuando el dataset se achica y lista vacía.
 - `useEmployeePagination.test.ts` — slice por página, cambio de página, última página, cambio de `pageSize` y lista vacía.
 - `employeeOptions.test.ts` — opciones únicas y ordenadas, cubriendo el caso del seed vacío de `Departments`/`Positions`.
+- `report.test.ts` — la lógica pura del polling (sección 4.b) extraída a `utils/report.ts`: intervalo base de 2 s, backoff de 4 s a partir de la mitad del deadline, corte exacto al llegar al tope (job que nunca completa) y la garantía de que el backoff nunca programa un poll que exceda el tiempo restante.
+- `errors.test.ts` — el mapeo de errores a mensajes legibles (`utils/errors.ts`: 401/403/404/500/`ECONNABORTED`/sin red/no-axios) y la semántica especial del 404 del reporte: no es "no se encontraron resultados", sino que el job ya no está disponible.
+- `useDevices.test.tsx` — el CRUD de dispositivos a nivel de hooks con axios mockeado: `POST`/`PUT`/`DELETE` con el payload e id esperados, y que la invalidación de caché refresque el listado (el alta aparece, la edición reemplaza la fila y el borrado la quita).
 - `EmployeeTable.integration.test.tsx` — cablea los hooks reales (`useEmployees` + `useEmployeePagination`) igual que hace `DashboardPage` y prueba la tabla de punta a punta: carga desde la API, paginación en el cliente (siguiente página), estado vacío y banner de error. La API se mockea **a nivel de módulo** con `vi.mock` sobre `api/axiosInstance` (con `vi.hoisted` para el mock del arreglo), y `utils/errors` también se mockea para leer el mensaje del error en el banner: no hay red real ni dependencias extra (a diferencia de MSW, que habría que instalar). Para correrlo solo:
 
 ```bash

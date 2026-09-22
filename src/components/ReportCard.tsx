@@ -1,20 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import { FileText, FileCheck2, Loader2, AlertCircle, RefreshCw, Timer, WifiOff } from 'lucide-react';
-import { useCreateReport, useReportStatus, STATUS_MAX_WAIT_MS } from '../hooks/useReport';
+import { useCreateReport, useReportStatus } from '../hooks/useReport';
+import { STATUS_MAX_WAIT_MS } from '../utils/report';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { REPORT_STATUS } from '../types/report';
-import { getErrorMessage } from '../utils/errors';
-
-// Mensaje contextual del error del reporte: un 404 del estado del job no es
-// "no se encontraron resultados" — el job vive en memoria del backend y, si la
-// API se reinició, esa executionId ya no existe.
-const getReportErrorMessage = (error: unknown): string => {
-  if (axios.isAxiosError(error) && error.response?.status === 404) {
-    return 'El reporte ya no está disponible: Reintenta la generación.';
-  }
-  return getErrorMessage(error);
-};
+import { getErrorMessage, getReportErrorMessage } from '../utils/errors';
 
 // Tarjeta del reporte: genera el job y muestra el progreso hasta Completed
 export const ReportCard: React.FC = () => {
