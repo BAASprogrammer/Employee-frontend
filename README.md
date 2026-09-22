@@ -97,15 +97,22 @@ La sección quedó así:
 
 ### El polling del reporte (4.b)
 
-El reporte es un job: un POST devuelve un `executionId` y el resto es consultar el estado hasta que complete. Se resolvió con el `refetchInterval` de React Query y a propósito no se usó `setInterval` a mano: con `setInterval` un request puede salir mientras el anterior sigue en vuelo, y hay que acordarse de limpiar el timer en cada ciclo de vida. React Query agenda el siguiente poll recién cuando el anterior terminó, lo cancela solo si el hook se desmonta (navegar fuera de la vista) y aborta el fetch con el `signal`. No queda forma de dejar requests huérfanas sin intervención manual.
+El reporte es un job: un POST devuelve un `executionId` y el resto es consultar el estado hasta que complete. Respuestas a las preguntas del enunciado:
 
-El polling corta en `Completed` y en tres casos más que aparecieron al probar:
+**¿Cada cuánto tiempo consultarías?**
+Arranco con **2 s** (`STATUS_POLLING_MS` en `utils/report.ts`). El enunciado no fija cuánto tarda el job (acá ~8 s), así que la frecuencia debe ser ágil al inicio para mostrar `Completed` apenas esté, pero siempre *acotada*: nunca más de 2 s para responder rápido, y con un tope global para no consultar eternamente. Entre cada poll corre el backoff (abajo).
 
-- **Deadline de 20 s**: si el job no termina, hay que dejar de preguntar. Se mide con `job.createdAt` porque `dataUpdatedAt` de React Query se renueva en cada response y no servía de ancla. Pasado el límite, la UI muestra "timeout" con botón de reintento.
-- **Error (404, 5xx, red)**: cualquier error corta el polling en el primer fallo (`retry: false`) — el polling mismo ya *es* el mecanismo de reintento, y si falla no hay estado del lado del servidor que vaya a mejorar solo: un 404 es un job que ya no existe (vive en memoria del backend) y un 5xx o un error de red no se resuelven preguntando otra vez. La UI muestra el mensaje del error con un botón manual "Reintentar generación" que dispara un job nuevo.
-- **Sin conexión**: la desconexión no produce un error sino que TanStack pausa la petición (`fetchStatus === 'paused'` a través de su *online manager*). El polling también se corta acá, y la UI muestra un aviso "Sin conexión: se pausó el seguimiento del reporte" con su propio reintento al volver.
+**¿Usarías backoff progresivo?**
+Sí, acotado por el deadline: **2 s mientras el job lleva menos de 10 s (mitad del tope) y 4 s después**. La función pura `getNextPollInterval(elapsedMs)` en `utils/report.ts` lo decide y está testeada (`report.test.ts`). Dos garantías: el backoff **nunca programa un poll que ya no cabe** dentro del tiempo restante del tope, y el corte es exacto al llegar al límite. Honestidad: para un job que casi siempre termina en ~8 s, el escalón de 4 s casi no se enciende; es una defensa de buenas prácticas para duraciones que no controlo, con costo cero en el camino normal.
 
-Cuando el polling sigue activo, el intervalo crece con backoff (2 s → 4 s) acotado por el deadline: 2 s mientras el job lleva menos de la mitad del tope (10 s) y 4 s después, para no bombardear al servidor y sin programar polls que ya no caben dentro del límite.
+**¿Cómo evitarías peticiones huérfanas si el usuario navega fuera de la vista?**
+Ese es el argumento principal para no usar `setInterval` a mano: con `setInterval` un request puede salir mientras el anterior sigue en vuelo, y hay que limpiar el timer en cada ciclo de vida. Se usó `refetchInterval` de React Query, que agenda el siguiente poll **recién cuando el anterior terminó**, cancela el scheduling si el hook se desmonta (navegar a otra pestaña) y aborta el fetch con el `signal` que le pasa al `queryFn`. No queda forma de dejar un polling corriendo en segundo plano sin intervención manual.
+
+**¿Qué harías si el job nunca llega a Completed (timeout)?**
+Dos defensas: un **deadline global y cortes explícitos**. El deadline son **20 s** (`STATUS_MAX_WAIT_MS`), medido contra `job.createdAt` — *no* contra `dataUpdatedAt` de React Query, que se renueva en cada response y no sirve de ancla. Pasado el límite, la UI muestra "El reporte tardó más de 20 s…" con botón de reintento (que genera un job nuevo). Y `retry: false`: el polling mismo *es* el reintento; si un poll falla (`404` = job que ya no existe en memoria, `5xx`, o error de red) no insisto porque esa respuesta no va a mejorar sola — corto y muestro el error con reintento manual. La desconexión tampoco queda colgada: TanStack pausa la petición (`fetchStatus === 'paused'` vía su *online manager*) y el polling se corta con un aviso propio.
+
+**¿Qué usaría en React para manejar este ciclo de vida?**
+React Query con `refetchInterval` — elegido sobre `useEffect + cleanup` con `setInterval` + `AbortController`: esa alternativa te obliga a orquestar a mano el desmontaje, el aborto y la race condition de requests superpuestas; TanStack resuelve los tres. `AbortController` igual existe en el stack, pero lo maneja la librería. Regla: si necesitás *leer* y sincronizar estado con el servidor, React Query; `setInterval` manual queda para contadores de UI, no para red.
 
 ### Sesión y token: vivir con lo que el contrato da
 
