@@ -1,6 +1,6 @@
 import React from 'react';
 import type { EmployeeRowProps } from '../types/employeeRow';
-import { getInitials, getAvatarColor } from '../constants/avatar';
+import { getInitials, getAvatarColor } from '../utils/avatar';
 
 export const EmployeeRow: React.FC<EmployeeRowProps> = ({ employee }) => {
   const nombre = employee.name || 'Sin Nombre';

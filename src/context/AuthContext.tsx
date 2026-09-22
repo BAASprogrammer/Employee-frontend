@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import type { User, LoginRequest, LoginResponse } from '../types/auth';
 import { AuthContext } from './auth';
-import { api, tokenStorage, setUnauthorizedRequest } from '../api/axiosInstance';
+import { api, setUnauthorizedRequest } from '../api/axiosInstance';
+import { tokenStorage } from '../utils/tokenStorage';
 import { readStoredUser, saveStoredUser, clearStoredUser } from '../utils/userStorage';
 
 // Provee el contexto de autenticación a los componentes hijos

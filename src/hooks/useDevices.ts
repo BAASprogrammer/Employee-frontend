@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, getErrorMessage } from '../api/axiosInstance';
+import { api } from '../api/axiosInstance';
+import { getErrorMessage } from '../utils/errors';
 import type { Device, DeviceInput } from '../types/device';
 import { useOnlineStatus } from './useOnlineStatus';
 

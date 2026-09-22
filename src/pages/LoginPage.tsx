@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
-import { getErrorMessage } from '../api/axiosInstance';
+import { getErrorMessage } from '../utils/errors';
 import { User, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Users, WifiOff } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {

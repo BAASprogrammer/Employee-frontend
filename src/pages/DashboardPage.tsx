@@ -11,7 +11,7 @@ import { Sidebar } from '../components/Sidebar';
 import { EmployeeTable } from '../components/EmployeeTable';
 import { DeviceTable } from '../components/DeviceTable';
 import { ReportCard } from '../components/ReportCard';
-import { getErrorMessage } from '../api/axiosInstance';
+import { getErrorMessage } from '../utils/errors';
 import type { DeviceInput } from '../types/device';
 
 // Key que conserva la pestaña activa en localStorage para mantenerla al recargar

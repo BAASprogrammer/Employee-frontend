@@ -30,7 +30,7 @@ La base URL se toma de `VITE_API_URL` desde el archivo `.env` (por defecto `http
 
 ```
 src/
-├── api/axiosInstance.ts        # axios: interceptor Bearer, manejo de 401, errores legibles
+├── api/axiosInstance.ts        # axios: instancia, interceptor Bearer y manejo de 401
 ├── context/AuthContext.tsx     # estado de sesión (login, logout, cierre por 401)
 ├── hooks/
 │   ├── useEmployees.ts         # consulta con filtros (server-side, sin paginar)
@@ -44,7 +44,7 @@ src/
 ├── components/                 # EmployeeTable, DeviceTable, DeviceForm, ConfirmModal, ReportCard, Sidebar, ...
 ├── routes/AppRoutes.tsx        # rutas + guard de autenticación
 ├── types/                      # tipos que reflejan lo que la API devuelve
-└── utils/                      # jwt, userStorage, employeeOptions
+└── utils/                      # errors (mensajes legibles), tokenStorage, userStorage, jwt, avatar, employeeOptions
 ```
 
 ## Decisiones tomadas (y por qué)
@@ -138,7 +138,7 @@ Los estilos usan **Tailwind CSS v4** con su plugin oficial de Vite (`@tailwindcs
 - `useClientPagination.test.ts` — la paginación genérica que comparten directorio y dispositivos: slice por página, cambio de página, retroceso a la última página válida cuando el dataset se achica y lista vacía.
 - `useEmployeePagination.test.ts` — slice por página, cambio de página, última página, cambio de `pageSize` y lista vacía.
 - `employeeOptions.test.ts` — opciones únicas y ordenadas, cubriendo el caso del seed vacío de `Departments`/`Positions`.
-- `EmployeeTable.integration.test.tsx` — cablea los hooks reales (`useEmployees` + `useEmployeePagination`) igual que hace `DashboardPage` y prueba la tabla de punta a punta: carga desde la API, paginación en el cliente (siguiente página), estado vacío y banner de error. La API se mockea **a nivel de módulo** con `vi.mock` sobre `api/axiosInstance` (con `vi.hoisted` para el mock del arreglo): no hay red real ni dependencias extra (a diferencia de MSW, que habría que instalar). Para correrlo solo:
+- `EmployeeTable.integration.test.tsx` — cablea los hooks reales (`useEmployees` + `useEmployeePagination`) igual que hace `DashboardPage` y prueba la tabla de punta a punta: carga desde la API, paginación en el cliente (siguiente página), estado vacío y banner de error. La API se mockea **a nivel de módulo** con `vi.mock` sobre `api/axiosInstance` (con `vi.hoisted` para el mock del arreglo), y `utils/errors` también se mockea para leer el mensaje del error en el banner: no hay red real ni dependencias extra (a diferencia de MSW, que habría que instalar). Para correrlo solo:
 
 ```bash
 npx vitest run src/components/EmployeeTable.integration.test.tsx

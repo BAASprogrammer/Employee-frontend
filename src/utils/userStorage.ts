@@ -1,5 +1,5 @@
 import type { User } from '../types/auth';
-import { tokenStorage } from '../api/axiosInstance';
+import { tokenStorage } from './tokenStorage';
 import { isTokenExpired } from './jwt';
 
 // Constante que almacena el usuario en localStorage

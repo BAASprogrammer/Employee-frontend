@@ -4,7 +4,7 @@ import { FileText, FileCheck2, Loader2, AlertCircle, RefreshCw, Timer, WifiOff }
 import { useCreateReport, useReportStatus, STATUS_MAX_WAIT_MS } from '../hooks/useReport';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { REPORT_STATUS } from '../types/report';
-import { getErrorMessage } from '../api/axiosInstance';
+import { getErrorMessage } from '../utils/errors';
 
 // Mensaje contextual del error del reporte: un 404 del estado del job no es
 // "no se encontraron resultados" — el job vive en memoria del backend y, si la

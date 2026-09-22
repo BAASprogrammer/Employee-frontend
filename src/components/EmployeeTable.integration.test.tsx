@@ -8,8 +8,9 @@ import { useEmployeePagination } from '../hooks/useEmployeePagination';
 import type { Employee } from '../types/employee';
 
 // vi.mock reemplaza el módulo real de axios por un objeto de mentira: cuando
-// useEmployees importe { api, getErrorMessage } de ../api/axiosInstance, lo que
-// obtiene es esto, nunca la red de verdad.
+// useEmployees importe { api } de ../api/axiosInstance, lo que obtiene es esto,
+// nunca la red de verdad. getErrorMessage (utils/errors) también se mockea para
+// poder leer el mensaje del error arrojado por la query dentro del banner.
 //
 // vi.hoisted es OBLIGATORIO: vi.mock se ejecuta antes que el resto del archivo
 // (hoisting). Si apiGet se definiera después con `const`, el factory no la
@@ -19,6 +20,9 @@ const { apiGet } = vi.hoisted(() => ({ apiGet: vi.fn() }));
 vi.mock('../api/axiosInstance', () => ({
   // El código real hace .then((res) => res.data), por eso get devuelve { data }.
   api: { get: apiGet },
+}));
+
+vi.mock('../utils/errors', () => ({
   // useEmployees llama a getErrorMessage(error) para mostrar el banner;
   // esta versión convierte el error en su message para que el test lo lea.
   getErrorMessage: (e: unknown) => (e as Error).message,

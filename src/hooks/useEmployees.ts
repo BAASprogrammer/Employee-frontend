@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { api, getErrorMessage } from '../api/axiosInstance';
+import { api } from '../api/axiosInstance';
+import { getErrorMessage } from '../utils/errors';
 import type { Employee } from '../types/employee';
 import type { EmployeesResult } from '../types/employees';
 import { useOnlineStatus } from './useOnlineStatus';
