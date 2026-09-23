@@ -10,12 +10,16 @@ Se levanta primero la API (en el repo `EmployeeAPI`, rama `front-end`):
 docker compose up --build   # API en http://localhost:8080, Swagger en /swagger
 ```
 
-Y después el front:
+Y después el front. Antes de nada, **el repositorio del frontend debe clonarse o descargarse** (por ejemplo con `git clone`), y recién dentro de la carpeta clonada correr los comandos:
 
 ```bash
+git clone https://github.com/BAASprogrammer/Employee-frontend.git
+cd Employee-frontend
 npm install
 npm run dev
 ```
+
+(Alternativa: descargar el zip desde GitHub y ejecutar los comandos desde esa carpeta.)
 
 La base URL se toma de `VITE_API_URL` desde el archivo `.env` (por defecto `http://localhost:8080/`, se ve en `axiosInstance.ts`). Las credenciales de acceso son las que indica el repo del backend (admin/admin). `npm test` corre los tests (Vitest) y `npm run lint` el ESLint.
 
@@ -156,3 +160,9 @@ Los estilos usan **Tailwind CSS v4** con su plugin oficial de Vite (`@tailwindcs
 ```bash
 npx vitest run src/components/EmployeeTable.integration.test.tsx
 ```
+
+## Autor
+
+**BAASprogrammer** — bariassalvo@gmail.com
+
+Repositorio del frontend: https://github.com/BAASprogrammer/Employee-frontend
