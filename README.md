@@ -40,7 +40,7 @@ src/
 │   ├── useDevices.ts           # listado + alta/edición/borrado de dispositivos
 │   ├── useOnlineStatus.ts      # estado de red global, compartido por las vistas
 │   └── useReport.ts            # genera el job y pollea su estado
-├── pages/                      # LoginPage, DashboardPage
+├── pages/                      # DashboardPage (cascarón) + EmployeesView + DevicesView: cada vista monta sus propias queries solo en su tab, LoginPage
 ├── components/                 # EmployeeTable, DeviceTable, DeviceForm, ConfirmModal, ReportCard, Sidebar, SessionWarning, ...
 ├── routes/AppRoutes.tsx        # rutas + guard de autenticación
 ├── types/                      # tipos que reflejan lo que la API devuelve
