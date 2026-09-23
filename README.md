@@ -68,7 +68,7 @@ Se compararon dos caminos:
 - **Paginación en el cliente** (`slice`): corta el array con `(page-1)*15 .. page*15` y el DOM siempre tiene exactamente 15 filas. Es un hook de ~35 líneas, sin dependencias, determinista y fácil de testear.
 - **Virtualización** (`react-window`): renderiza solo lo visible (~20–30 filas) y permite scroll continuo por las 2000.
 
-Se eligió `slice` porque **ambas opciones mantienen los 2000 objetos en memoria y ambas acotan el DOM**: la única diferencia real es la UX de scroll fluido que aporta la virtualización, y a 2000 registros no justifica sumar una librería y su configuración (alturas de fila, sincronizar el scroll con los filtros). El punto 4 del enunciado pedía literalmente "paginación o carga incremental en el cliente", que es justo lo que hace el `slice`.
+Se eligió **la paginación en el cliente con `slice`** — cortar el array de la página actual con `Array.prototype.slice` de `(page-1)*15 .. page*15`—, porque eso es justo lo que el punto 4 del enunciado pedía literalmente: "paginación o carga incremental en el cliente". Y venció a la virtualización porque **ambas opciones mantienen los 2000 objetos en memoria y ambas acotan el DOM**: la única diferencia real es la UX de scroll fluido que aporta la virtualización, y a 2000 registros no justifica sumar una librería y su configuración (alturas de fila, sincronizar el scroll con los filtros).
 
 No es "siempre así", obvio. Quedaron escritas las reglas:
 
