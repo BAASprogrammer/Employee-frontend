@@ -76,18 +76,17 @@ export const LoginPage: React.FC = () => {
         {/* Texto central */}
         <div className="relative z-10">
           <h2 className="text-4xl font-bold text-white leading-tight mb-4">
-            Gestión de Empleados<br />
-            <span className="text-blue-300">centralizada y eficiente.</span>
+            Directorio centralizado de empleados<br />
           </h2>
-          <p className="text-blue-200/80 text-base max-w-sm leading-relaxed">
-            Consulta el directorio completo de empleados, departamentos y cargos desde un solo lugar, con acceso rápido y seguro.
+          <p className="text-blue-200/80 text-base max-w-lg leading-relaxed">
+            Consulta todos los empleados en un solo lugar, filtrados por departamento y cargo, con acceso rápido y protegido por sesión. Incluye gestión de dispositivos y generación automática de reporte.
           </p>
 
           {/* Estadísticas */}
           <div className="mt-10 grid grid-cols-3 gap-6">
             {[
-              { value: '1000+', label: 'Empleados' },
-              { value: '4+', label: 'Departamentos' },
+              { value: '1500+', label: 'Empleados' },
+              { value: '10+', label: 'Departamentos' },
             ].map(stat => (
               <div key={stat.label} className="text-center">
                 <div className="text-3xl font-bold text-white">{stat.value}</div>
