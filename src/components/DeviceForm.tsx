@@ -99,7 +99,7 @@ export const DeviceForm: React.FC<DeviceFormProps> = ({
           />
           {nameExceedsMax && (
             <span className="text-[10px] text-red-600">
-              El nombre no puede superar los {DEVICE_NAME_MAX_LENGTH} caracteres (tenés {form.name.length})
+              El nombre no puede superar los {DEVICE_NAME_MAX_LENGTH} caracteres (tienes {form.name.length})
             </span>
           )}
         </label>
@@ -114,7 +114,7 @@ export const DeviceForm: React.FC<DeviceFormProps> = ({
           />
           {locationExceedsMax && (
             <span className="text-[10px] text-red-600">
-              La ubicación no puede superar los {DEVICE_LOCATION_MAX_LENGTH} caracteres (tenés {form.location.length})
+              La ubicación no puede superar los {DEVICE_LOCATION_MAX_LENGTH} caracteres (tienes {form.location.length})
             </span>
           )}
         </label>
