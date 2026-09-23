@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { AlertCircle, Loader2, WifiOff, X } from 'lucide-react';
 import type { DeviceFormProps } from '../types/deviceForm';
 import type { DeviceInput } from '../types/device';
+import {
+  DEVICE_NAME_MAX_LENGTH,
+  DEVICE_LOCATION_MAX_LENGTH,
+  DEVICE_TIMEZONE_MAX_LENGTH,
+} from '../constants/device';
 
 // Formulario inline de alta/edición de dispositivos. Maneja su propio estado y
 // la validación en el cliente (los requeridos del schema de la API). El padre
@@ -41,6 +46,20 @@ export const DeviceForm: React.FC<DeviceFormProps> = ({
       setFormError('Indica la zona horaria del dispositivo');
       return;
     }
+    // Límites del contrato (DataAnnotations del backend): el input ya limita
+    // con maxLength, esto es red de seguridad para valores que vengan cargados
+    if (input.name.length > DEVICE_NAME_MAX_LENGTH) {
+      setFormError(`El nombre no puede superar los ${DEVICE_NAME_MAX_LENGTH} caracteres`);
+      return;
+    }
+    if (input.location.length > DEVICE_LOCATION_MAX_LENGTH) {
+      setFormError(`La ubicación no puede superar los ${DEVICE_LOCATION_MAX_LENGTH} caracteres`);
+      return;
+    }
+    if (input.timezone.length > DEVICE_TIMEZONE_MAX_LENGTH) {
+      setFormError(`La zona horaria no puede superar los ${DEVICE_TIMEZONE_MAX_LENGTH} caracteres`);
+      return;
+    }
     setFormError(null);
     onSubmit(input);
   };
@@ -77,6 +96,7 @@ export const DeviceForm: React.FC<DeviceFormProps> = ({
           <input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
+            maxLength={DEVICE_NAME_MAX_LENGTH}
             placeholder="Ej: Escáner Hall Central"
             className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-normal text-slate-700 outline-none focus:border-blue-400"
           />
@@ -86,6 +106,7 @@ export const DeviceForm: React.FC<DeviceFormProps> = ({
           <input
             value={form.location}
             onChange={(e) => setForm({ ...form, location: e.target.value })}
+            maxLength={DEVICE_LOCATION_MAX_LENGTH}
             placeholder="Ej: Oficina 3"
             className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-normal text-slate-700 outline-none focus:border-blue-400"
           />
@@ -95,6 +116,7 @@ export const DeviceForm: React.FC<DeviceFormProps> = ({
           <input
             value={form.timezone}
             onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+            maxLength={DEVICE_TIMEZONE_MAX_LENGTH}
             placeholder="Ej: America/Argentina/Buenos_Aires"
             className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-normal text-slate-700 outline-none focus:border-blue-400"
           />

@@ -91,7 +91,7 @@ La sección quedó así:
 
 - **Listado** con `useDevices` (`GET /api/device`), desacoplado por props como `EmployeeTable` y con los mismos estados: carga, vacío (con CTA a dar de alta), error y desconexión.
 - **Paginación en el cliente**: los dispositivos aplican la *misma* estrategia anti-sobrecarga de la sección 4.a que el directorio — el slice lo resuelve el hook genérico `useClientPagination` (que `useEmployeePagination` también reutiliza), nunca se renderizan más de 15 filas y se muestra el `PaginationBar`. Si la última fila de la última página se borra, la página retrocede a la última válida en vez de quedar vacía.
-- **Alta y edición** con un formulario inline (`POST` y `PUT`) que valida en el cliente los requeridos del schema (`name` ≥ 2 chars, `location`, `timezone`) y usa `mutateAsync`, con invalidación de la cache al completar.
+- **Alta y edición** con un formulario inline (`POST` y `PUT`) que valida en el cliente los límites del schema (`name` ≥ 2 y ≤ 100 chars, `location` ≤ 150, `timezone` ≤ 64, todos requeridos) y usa `mutateAsync`, con invalidación de la cache al completar.
 - **Borrado** (`DELETE`) con un modal de confirmación propio.
 - Sin librerías extra: el formulario inline, el modal de confirmación y la paginación (reuso de `useClientPagination`) se resuelven con JSX + Tailwind y el hook ya existente, en línea con la política de dependencias del resto del proyecto.
 
