@@ -1,13 +1,17 @@
-// Lee el "exp" del JWT para no arrancar con un token ya vencido
-export function isTokenExpired(token: string): boolean {
+// Devuelve el instante de expiración del JWT en epoch ms (null si no tiene exp)
+export function getTokenExpiry(token: string): number | null {
   try {
     // Parsea el payload del token
     const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-    // Verifica si el token está expirado
-    // payload.exp se multiplica por 1000 porque está en segundos y Date.now() está en milisegundos
-    return typeof payload.exp === 'number' && payload.exp * 1000 <= Date.now();
+    // payload.exp viene en segundos y acá se devuelve en milisegundos
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : null;
   } catch {
-    // Si el token está expirado, retorna true
-    return true; // token ilegible: se trata como inválido
+    return null; // token ilegible
   }
+}
+
+// Lee el "exp" del JWT para no arrancar con un token ya vencido
+export function isTokenExpired(token: string): boolean {
+  const expiry = getTokenExpiry(token);
+  return expiry === null || expiry <= Date.now();
 }

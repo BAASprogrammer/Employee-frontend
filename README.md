@@ -31,7 +31,7 @@ La base URL se toma de `VITE_API_URL` desde el archivo `.env` (por defecto `http
 ```
 src/
 ├── api/axiosInstance.ts        # axios: instancia, interceptor Bearer y manejo de 401
-├── context/AuthContext.tsx     # estado de sesión (login, logout, cierre por 401)
+├── context/AuthContext.tsx     # estado de sesión (login, logout, cierre por 401, reloj de expiración)
 ├── hooks/
 │   ├── useEmployees.ts         # consulta con filtros (server-side, sin paginar)
 │   ├── useEmployeeOptions.ts   # opciones de deptos/cargos desde los empleados
@@ -41,7 +41,7 @@ src/
 │   ├── useOnlineStatus.ts      # estado de red global, compartido por las vistas
 │   └── useReport.ts            # genera el job y pollea su estado
 ├── pages/                      # LoginPage, DashboardPage
-├── components/                 # EmployeeTable, DeviceTable, DeviceForm, ConfirmModal, ReportCard, Sidebar, ...
+├── components/                 # EmployeeTable, DeviceTable, DeviceForm, ConfirmModal, ReportCard, Sidebar, SessionWarning, ...
 ├── routes/AppRoutes.tsx        # rutas + guard de autenticación
 ├── types/                      # tipos que reflejan lo que la API devuelve
 └── utils/                      # errors, report (polling), tokenStorage, userStorage, jwt, avatar, employeeOptions
@@ -120,6 +120,7 @@ El backend entrega el JWT en el `body` del login (`LoginResponse.Token`), lo dej
 
 - El token tiene que vivir en `localStorage` porque es legible por JS: es lo único que permite mantener sesión al recargar.
 - Cuando vence, un 401 lo resuelve todo: el interceptor central de `axiosInstance.ts` desloguea y vuelve a `/login`. Simple y predecible.
+- Como la vida del token es conocida en el propio token (`payload.exp`), hay un **aviso proactivo** que no depende del backend: `AuthContext` ancla el instante de expiración al `exp` del JWT (`getTokenExpiry` en `utils/jwt.ts`) y corre un reloj de 1 s que (a) mantiene `sessionRemainingMs` actualizado para la UI y (b) al vencer cierra la sesión local sin esperar un 401. `SessionWarning` muestra un banner ambar cuando quedan menos de **5 min**: "Tu sesión expira en ~Xm Ys…". Es UX e higiene local — la seguridad real la sigue dando el backend con la validación de `exp` y el 401; acá tampoco hay *refresco* de sesión, solo aviso y cierre limpio.
 
 La solución *responsable* a ese vacío requiere backend: access token de vida corta + un `refresh_token` real en cookie `HttpOnly`/`Secure`/`SameSite`, y reintento *single-flight* de las requests rechazadas en el interceptor de respuesta. Sin acceso al backend, esa vía no existe, y acá es donde vale la pena explicitar lo que **no** se hizo: guardar las credenciales para hacer un re-login silencioso. Encriptarlas en el cliente con una clave que también viaja en el bundle es criptografía cosmética — termina siendo peor que el JWT en `localStorage`.
 
@@ -140,7 +141,7 @@ Los estilos usan **Tailwind CSS v4** con su plugin oficial de Vite (`@tailwindcs
 
 ## Tests
 
-`npm test` → 30 tests en 7 archivos. Se priorizaron los unitarios (lógica pura) y las integraciones de los flujos que más importan (directorio, dispositivos):
+`npm test` → 38 tests en 9 archivos. Se priorizaron los unitarios (lógica pura) y las integraciones de los flujos que más importan (directorio, dispositivos, reporte y guards de rutas):
 
 - `useClientPagination.test.ts` — la paginación genérica que comparten directorio y dispositivos: slice por página, cambio de página, retroceso a la última página válida cuando el dataset se achica y lista vacía.
 - `useEmployeePagination.test.ts` — slice por página, cambio de página, última página, cambio de `pageSize` y lista vacía.
@@ -149,6 +150,8 @@ Los estilos usan **Tailwind CSS v4** con su plugin oficial de Vite (`@tailwindcs
 - `errors.test.ts` — el mapeo de errores a mensajes legibles (`utils/errors.ts`: 401/403/404/500/`ECONNABORTED`/sin red/no-axios) y la semántica especial del 404 del reporte: no es "no se encontraron resultados", sino que el job ya no está disponible.
 - `useDevices.test.tsx` — el CRUD de dispositivos a nivel de hooks con axios mockeado: `POST`/`PUT`/`DELETE` con el payload e id esperados, y que la invalidación de caché refresque el listado (el alta aparece, la edición reemplaza la fila y el borrado la quita).
 - `EmployeeTable.integration.test.tsx` — cablea los hooks reales (`useEmployees` + `useEmployeePagination`) igual que hace `DashboardPage` y prueba la tabla de punta a punta: carga desde la API, paginación en el cliente (siguiente página), estado vacío y banner de error. La API se mockea **a nivel de módulo** con `vi.mock` sobre `api/axiosInstance` (con `vi.hoisted` para el mock del arreglo), y `utils/errors` también se mockea para leer el mensaje del error en el banner: no hay red real ni dependencias extra (a diferencia de MSW, que habría que instalar). Para correrlo solo:
+- `ReportCard.test.tsx` — el ciclo completo del reporte con polling real (`STATUS_POLLING_MS`): generar → `Processing` → `Completed` con resultado, error 500 del `POST` con reintento, el **404 con mensaje propio** ("ya no está disponible") y el **timeout** (job viejo en `Processing` con `createdAt` 25 s atrás, para que el timer caiga a ~0 ms sin esperar los 20 s reales).
+- `AppRoutes.test.tsx` — los guards de rutas con `MemoryRouter` + contexto real de auth: anónimo en `/dashboard` y en una ruta desconocida cae a `/login`; con sesión, `/login` vuelve al dashboard (`PublicRoute`) y `/dashboard` queda accesible (`ProtectedRoute`).
 
 ```bash
 npx vitest run src/components/EmployeeTable.integration.test.tsx

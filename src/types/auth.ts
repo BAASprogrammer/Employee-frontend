@@ -24,4 +24,7 @@ export interface LoginResponse {
 export interface AuthContextType extends AuthState {
   login: (username: string, password: string, signal?: AbortSignal) => Promise<void>;
   logout: () => void;
+  // Tiempo restante de sesión en ms (null sin sesión o sin exp): lo expone el
+  // provider para que la UI avise de la expiración antes de que venza
+  sessionRemainingMs: number | null;
 }

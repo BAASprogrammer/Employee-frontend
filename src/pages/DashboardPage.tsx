@@ -11,6 +11,7 @@ import { Sidebar } from '../components/Sidebar';
 import { EmployeeTable } from '../components/EmployeeTable';
 import { DeviceTable } from '../components/DeviceTable';
 import { ReportCard } from '../components/ReportCard';
+import { SessionWarning } from '../components/SessionWarning';
 import { getErrorMessage } from '../utils/errors';
 import type { DeviceInput } from '../types/device';
 
@@ -119,7 +120,10 @@ export const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 font-sans overflow-hidden">
+    <>
+      {/* Aviso proactivo de expiración de sesión (solo si quedan <5 min) */}
+      <SessionWarning />
+      <div className="flex h-screen bg-slate-100 font-sans overflow-hidden">
       {/* Sidebar */}
       <Sidebar
         user={user}
@@ -218,6 +222,7 @@ export const DashboardPage: React.FC = () => {
           )}
         </div>
       </main>
-    </div>
+      </div>
+    </>
   );
 };
