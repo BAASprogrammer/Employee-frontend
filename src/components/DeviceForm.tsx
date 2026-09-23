@@ -22,6 +22,12 @@ export const DeviceForm: React.FC<DeviceFormProps> = ({
   const [form, setForm] = useState<DeviceInput>(initial);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Flags de exceso por campo: feedback en vivo en cada tecla/pegado (sin
+  // truncar el texto, queda todo hasta que el usuario lo corrija)
+  const nameExceedsMax = form.name.length > DEVICE_NAME_MAX_LENGTH;
+  const locationExceedsMax = form.location.length > DEVICE_LOCATION_MAX_LENGTH;
+  const timezoneExceedsMax = form.timezone.length > DEVICE_TIMEZONE_MAX_LENGTH;
+
   // Corta el envío offline: la mutation quedaría pausada en silencio (spinner
   // sin mensaje). Mejor avisar y dejar el formulario listo para reintentar.
   const handleSubmit = () => {
@@ -46,20 +52,11 @@ export const DeviceForm: React.FC<DeviceFormProps> = ({
       setFormError('Indica la zona horaria del dispositivo');
       return;
     }
-    // Límites del contrato (DataAnnotations del backend): el input ya limita
-    // con maxLength, esto es red de seguridad para valores que vengan cargados
-    if (input.name.length > DEVICE_NAME_MAX_LENGTH) {
-      setFormError(`El nombre no puede superar los ${DEVICE_NAME_MAX_LENGTH} caracteres`);
-      return;
-    }
-    if (input.location.length > DEVICE_LOCATION_MAX_LENGTH) {
-      setFormError(`La ubicación no puede superar los ${DEVICE_LOCATION_MAX_LENGTH} caracteres`);
-      return;
-    }
-    if (input.timezone.length > DEVICE_TIMEZONE_MAX_LENGTH) {
-      setFormError(`La zona horaria no puede superar los ${DEVICE_TIMEZONE_MAX_LENGTH} caracteres`);
-      return;
-    }
+    // Límites del contrato (DataAnnotations del backend). El mensaje de exceso
+    // ya se muestra en vivo bajo cada campo; acá solo se corta el envío.
+    if (input.name.length > DEVICE_NAME_MAX_LENGTH) return;
+    if (input.location.length > DEVICE_LOCATION_MAX_LENGTH) return;
+    if (input.timezone.length > DEVICE_TIMEZONE_MAX_LENGTH) return;
     setFormError(null);
     onSubmit(input);
   };
@@ -96,30 +93,45 @@ export const DeviceForm: React.FC<DeviceFormProps> = ({
           <input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            maxLength={DEVICE_NAME_MAX_LENGTH}
             placeholder="Ej: Escáner Hall Central"
-            className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-normal text-slate-700 outline-none focus:border-blue-400"
+            className={`bg-white border rounded-lg px-2.5 py-1.5 text-xs font-normal text-slate-700 outline-none ${nameExceedsMax ? 'border-red-400 focus:border-red-400' : 'border-slate-200 focus:border-blue-400'
+              }`}
           />
+          {nameExceedsMax && (
+            <span className="text-[10px] text-red-600">
+              El nombre no puede superar los {DEVICE_NAME_MAX_LENGTH} caracteres (tenés {form.name.length})
+            </span>
+          )}
         </label>
         <label className="flex flex-col gap-1 text-[11px] font-semibold text-slate-500">
           Ubicación
           <input
             value={form.location}
             onChange={(e) => setForm({ ...form, location: e.target.value })}
-            maxLength={DEVICE_LOCATION_MAX_LENGTH}
             placeholder="Ej: Oficina 3"
-            className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-normal text-slate-700 outline-none focus:border-blue-400"
+            className={`bg-white border rounded-lg px-2.5 py-1.5 text-xs font-normal text-slate-700 outline-none ${locationExceedsMax ? 'border-red-400 focus:border-red-400' : 'border-slate-200 focus:border-blue-400'
+              }`}
           />
+          {locationExceedsMax && (
+            <span className="text-[10px] text-red-600">
+              La ubicación no puede superar los {DEVICE_LOCATION_MAX_LENGTH} caracteres (tenés {form.location.length})
+            </span>
+          )}
         </label>
         <label className="flex flex-col gap-1 text-[11px] font-semibold text-slate-500">
           Zona horaria
           <input
             value={form.timezone}
             onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-            maxLength={DEVICE_TIMEZONE_MAX_LENGTH}
             placeholder="Ej: America/Argentina/Buenos_Aires"
-            className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-normal text-slate-700 outline-none focus:border-blue-400"
+            className={`bg-white border rounded-lg px-2.5 py-1.5 text-xs font-normal text-slate-700 outline-none ${timezoneExceedsMax ? 'border-red-400 focus:border-red-400' : 'border-slate-200 focus:border-blue-400'
+              }`}
           />
+          {timezoneExceedsMax && (
+            <span className="text-[10px] text-red-600">
+              La zona horaria no puede superar los {DEVICE_TIMEZONE_MAX_LENGTH} caracteres (tienes {form.timezone.length})
+            </span>
+          )}
         </label>
       </div>
 
